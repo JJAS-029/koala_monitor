@@ -1,7 +1,7 @@
 # Generados
 __pycache__/
 *.pyc
-capturas/
+pruebas/capturas/
 node_modules/
 
 # Respaldos locales de settings.json
