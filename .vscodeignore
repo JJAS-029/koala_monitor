@@ -1,0 +1,7 @@
+pruebas/**
+docs/**
+empaquetar.py
+*.vsix
+.gitignore
+.vscodeignore
+**/__pycache__/**

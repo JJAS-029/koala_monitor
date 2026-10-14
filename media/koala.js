@@ -1528,6 +1528,7 @@
   let comidaSoltada = null;
   const ICONO_COMIDA = () => ({ x: 14, y: suelo + 9 });
   function dibujarComidaArrastrable() {
+    if (est.sinIconoComida) return; // p. ej. al generar el icono de la extensión
     const ic = ICONO_COMIDA();
     if (arrastre && arrastre.tipo === 'comida' && arrastre.movido) dibujarRama(arrastre.x, arrastre.y, 3, 1);
     else dibujarRama(ic.x, ic.y, 3, 0.6);

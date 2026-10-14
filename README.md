@@ -1,7 +1,39 @@
 # Koala científico 🐨🧪
 
-Mascota de laboratorio para el Explorador de VS Code. Trabaja contigo (editor, terminal y
-Claude Code) y mide tu consumo de Claude Code: **sesión (5 h)** y **semana**.
+Mascota de laboratorio en pixel art para el Explorador de VS Code. Trabaja contigo (editor,
+terminal y Claude Code), festeja tus commits, te avisa cuando Claude te necesita y funciona como
+**mini monitor** de tu consumo de Claude Code: límites de **sesión (5 h)** y **semana**, ritmo,
+costo equivalente, pomodoro, git y servidor.
+
+![Animaciones del koala](docs/capturas/animaciones.png)
+
+| Mascota | Consumo | Hoy | Sistema |
+|---|---|---|---|
+| ![Mascota](docs/capturas/panel-mascota.png) | ![Consumo](docs/capturas/panel-consumo.png) | ![Hoy](docs/capturas/panel-hoy.png) | ![Sistema](docs/capturas/panel-sistema.png) |
+
+*Capturas con datos de demostración.*
+
+## Empezar
+1. Instala la extensión y abre el Explorador → **Koala científico**.
+2. Acepta **conectar con Claude Code** cuando te lo ofrezca (o ejecuta *Koala científico:
+   configurar monitor de Claude Code*). Necesita Python 3.
+3. Opcional: en la pestaña **Consumo**, *Usar dato directo de Anthropic*.
+
+La mascota, el pomodoro y las pestañas Hoy y Sistema funcionan sin configurar nada.
+
+## Privacidad
+Todo se queda en tu computadora salvo lo que actives tú:
+- Lee tus transcripciones de Claude Code (`~/.claude/projects`) **solo para contar tokens**,
+  modelos, herramientas y horas; no lee ni envía el contenido de las conversaciones.
+- *Configurar monitor* agrega a `~/.claude/settings.json` una status line y hooks (con respaldo
+  previo). Escriben dos archivos locales: `~/.claude/koala-uso.json` y `~/.claude/koala-estado.json`.
+- **Dato directo de Anthropic (desactivado por omisión)**: usa el token de la sesión de Claude Code
+  de tu equipo para consultar `api.anthropic.com/api/oauth/usage`. El token solo viaja a Anthropic;
+  no se muestra ni se registra.
+- **Servicios vigilados**: solo las direcciones que tú agregas.
+- Sin telemetría ni analítica de ningún tipo.
+
+Proyecto independiente: no está afiliado a Anthropic. "Claude" es una marca de Anthropic.
 
 ## Monitor de Claude Code
 - **Porcentaje oficial**: Claude Code entrega `rate_limits` a su *status line*. El script
@@ -132,8 +164,14 @@ macOS pide permiso). Con **Settings Sync** de VS Code, el ánimo, la saciedad y 
 te siguen entre computadoras; el resto (pomodoros, tiempo activo, consumo) es de cada máquina.
 Si usas Claude Code por SSH, instala la extensión en el remoto (corre donde está `~/.claude`).
 
+## Licencia
+MIT. Código en https://github.com/JJAS-029/koala_monitor.
+
 ## Desarrollo
 - Pruebas sin navegador: `node pruebas/simular.js [carpeta]` (capturas PNG por acción).
 - Vista previa real del panel: `pruebas/vista-previa.js` (activa la extensión con un VS Code simulado
   y captura cada pestaña con Chromium sin interfaz; ver el encabezado del archivo).
+- Icono: `node pruebas/icono.js`. Capturas del readme: `node pruebas/capturas-readme.js` y
+  `pruebas/datos-demo.js` (transcripciones ficticias) con `DEMO=1` en la vista previa.
+- Paquete para la tienda: `npx @vscode/vsce package` (respeta `.vscodeignore`).
 - Paquete: `python3 empaquetar.py` → `.vsix`; instalar con `code --install-extension <vsix> --force`.

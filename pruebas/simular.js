@@ -62,8 +62,9 @@ function escribirPNG(ruta, w, h, rgba) {
 }
 
 // ---------- Entorno falso ----------
-function crearEntorno(semilla) {
-  const w = ANCHO * DPR, h = ALTO * DPR;
+function crearEntorno(semilla, opciones = {}) {
+  const ANCHO_ = opciones.ancho || ANCHO, ALTO_ = opciones.alto || ALTO, DPR_ = opciones.dpr || DPR;
+  const w = Math.round(ANCHO_ * DPR_), h = Math.round(ALTO_ * DPR_);
   const pix = new Float32Array(w * h * 4);
   const estadistica = { rects: 0, nan: 0, colores: new Set() };
   const ctx2d = {
@@ -93,7 +94,7 @@ function crearEntorno(semilla) {
   const elementos = {};
   const elemento = (id) => elementos[id] || (elementos[id] = {
     id, style: {}, textContent: '', width: 0, height: 0,
-    clientWidth: ANCHO, clientHeight: ALTO,
+    clientWidth: ANCHO_, clientHeight: ALTO_,
     oyentes: {},
     getContext: () => ctx2d,
     addEventListener(t, fn) { (this.oyentes[t] = this.oyentes[t] || []).push(fn); },
@@ -115,7 +116,7 @@ function crearEntorno(semilla) {
     requestAnimationFrame: (fn) => { raf = fn; },
     setInterval: () => 0,
     getComputedStyle: () => ({ getPropertyValue: () => '' }),
-    devicePixelRatio: DPR,
+    devicePixelRatio: DPR_,
     addEventListener: (t, fn) => { if (t === 'message') oyentes.push(fn); },
   };
   sandbox.window = sandbox;
@@ -213,6 +214,12 @@ function createSafe(semilla) { return crearEntorno(semilla); }
 
 function cada(e, tomar, total, intervalo) {
   for (let t = 0; t < total; t += intervalo) { e.avanzar(intervalo); tomar(); }
+}
+
+// Usado como librería (p. ej. pruebas/icono.js): exporta el entorno y no corre las escenas.
+if (require.main !== module) {
+  module.exports = { crearEntorno, escribirPNG };
+  return;
 }
 
 escena('01-ocio', 7, (e, tomar) => {

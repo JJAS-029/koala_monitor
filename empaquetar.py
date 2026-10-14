@@ -7,7 +7,7 @@ import zipfile
 from xml.sax.saxutils import escape
 
 RAIZ = os.path.dirname(os.path.abspath(__file__))
-ARCHIVOS = ["package.json", "extension.js", "monitor.js", "costos.js", "readme.md", "media/koala.js", "media/panel.js",
+ARCHIVOS = ["package.json", "extension.js", "monitor.js", "costos.js", "README.md", "CHANGELOG.md", "LICENSE", "media/koala.js", "media/panel.js", "media/icono.png",
             "scripts/koala-statusline.py", "scripts/koala-hook.py"]
 
 pkg = json.load(open(os.path.join(RAIZ, "package.json"), encoding="utf-8"))
@@ -19,6 +19,8 @@ tipos = """<?xml version="1.0" encoding="utf-8"?>
   <Default Extension=".js" ContentType="application/javascript"/>
   <Default Extension=".md" ContentType="text/markdown"/>
   <Default Extension=".py" ContentType="text/x-python"/>
+  <Default Extension=".png" ContentType="image/png"/>
+  <Default Extension=".txt" ContentType="text/plain"/>
   <Default Extension=".vsixmanifest" ContentType="text/xml"/>
 </Types>
 """
@@ -29,7 +31,9 @@ manifiesto = f"""<?xml version="1.0" encoding="utf-8"?>
     <Identity Language="es-MX" Id="{pkg['name']}" Version="{pkg['version']}" Publisher="{pkg['publisher']}"/>
     <DisplayName>{escape(pkg['displayName'])}</DisplayName>
     <Description xml:space="preserve">{escape(pkg['description'])}</Description>
-    <Categories>Other</Categories>
+    <Categories>Other,Visualization</Categories>
+    <Icon>extension/media/icono.png</Icon>
+    <License>extension/LICENSE.txt</License>
     <Properties>
       <Property Id="Microsoft.VisualStudio.Code.Engine" Value="{pkg['engines']['vscode']}"/>
       <Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="workspace"/>
@@ -41,7 +45,9 @@ manifiesto = f"""<?xml version="1.0" encoding="utf-8"?>
   <Dependencies/>
   <Assets>
     <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true"/>
-    <Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/readme.md" Addressable="true"/>
+    <Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" Addressable="true"/>
+    <Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSE.txt" Addressable="true"/>
+    <Asset Type="Microsoft.VisualStudio.Services.Icons.Default" Path="extension/media/icono.png" Addressable="true"/>
   </Assets>
 </PackageManifest>
 """
@@ -50,7 +56,8 @@ with zipfile.ZipFile(salida, "w", zipfile.ZIP_DEFLATED) as z:
     z.writestr("[Content_Types].xml", tipos)
     z.writestr("extension.vsixmanifest", manifiesto)
     for rel in ARCHIVOS:
-        info = zipfile.ZipInfo.from_file(os.path.join(RAIZ, rel), "extension/" + rel)
+        destino = "LICENSE.txt" if rel == "LICENSE" else rel
+        info = zipfile.ZipInfo.from_file(os.path.join(RAIZ, rel), "extension/" + destino)
         with open(os.path.join(RAIZ, rel), "rb") as f:
             z.writestr(info, f.read(), zipfile.ZIP_DEFLATED)
 print(salida)

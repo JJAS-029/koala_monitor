@@ -77,6 +77,8 @@ if (process.env.API_FALSA) {
     return peticion;
   };
 }
+// DEMO=1: nombre de equipo ficticio para capturas de documentación.
+if (process.env.DEMO) require('os').hostname = () => 'mi-servidor';
 const cargar = Module._load;
 Module._load = function (req, ...r) { return req === 'vscode' ? vscodeFalso : cargar.call(this, req, ...r); };
 
