@@ -473,6 +473,21 @@ function temporada() {
   if (t !== 'auto') return t;
   const d = new Date();
   const mes = d.getMonth() + 1, dia = d.getDate();
+  const diaDelAnio = Math.round((new Date(d.getFullYear(), mes - 1, dia) - new Date(d.getFullYear(), 0, 0)) / 86400000);
+  // Cumpleaños del usuario: "DD/MM" (p. ej. "29/03").
+  const cumple = /^(\d{1,2})[/-](\d{1,2})$/.exec(String(config().get('cumpleanos', '')).trim());
+  if (cumple && Number(cumple[1]) === dia && Number(cumple[2]) === mes) return 'cumple';
+  // Días festivos de un solo día (mandan sobre las temporadas largas).
+  if ((mes === 12 && dia === 31) || (mes === 1 && dia === 1)) return 'anionuevo';
+  if (mes === 1 && dia === 6) return 'reyes';
+  if (mes === 2 && dia === 2) return 'marmota'; // y Día de la Candelaria: tamales
+  if (mes === 2 && dia === 14) return 'sanvalentin';
+  if (mes === 3 && dia === 14) return 'pi';
+  if (mes === 3 && (dia === 20 || dia === 21)) return 'primavera';
+  if (mes === 4 && dia === 30) return 'nino';
+  if (mes === 5 && dia === 10) return 'madres';
+  if (diaDelAnio === 256) return 'programador'; // 13 de sep. (12 en año bisiesto)
+  if (mes === 10 && dia === 12) return 'pluricultural';
   if ((mes === 10 && dia >= 28) || (mes === 11 && dia <= 2)) return 'muertos';
   if ((mes === 12 && dia >= 12) || (mes === 1 && dia <= 6)) return 'navidad';
   if (mes === 9 && dia >= 13 && dia <= 16) return 'patrias';

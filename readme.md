@@ -83,10 +83,25 @@ baila con el mensaje del commit; con cada **push** lanza un cohete. Cada uno sub
 - **Arrastrar**: carga al koala con el mouse y suéltalo (cae aplastado); arrastra la rama de la
   esquina para darle de comer donde la sueltes. Un clic sin arrastrar lo mima.
 
-## Temporadas
-Día de Muertos (28 oct.–2 nov.): antifaz de catrina, cempasúchil y papel picado. Navidad
-(12 dic.–6 ene.): gorro. Fiestas patrias (13–16 sep.): moño tricolor. `koalaCientifico.temporada`
-para elegir uno cuando quieras.
+## Temporadas y fechas
+| Fecha | El koala… |
+|---|---|
+| 31 dic. – 1 ene. | gorro de fiesta y fuegos artificiales |
+| 6 ene. | corona; come rosca de Reyes |
+| 2 feb. | la marmota sale a ver su sombra; Candelaria: come tamales |
+| 14 feb. | moño rosa y corazones |
+| 14 mar. | pizarrón con π (Día de Pi) |
+| 20–21 mar. | flores y mariposa (primavera) |
+| 30 abr. | gorro de fiesta y globos (Día del Niño) |
+| 10 may. | flor en la oreja y florero (Día de las Madres) |
+| día 256 | lluvia de ceros y unos (Día del Programador) |
+| 13–16 sep. | moño tricolor |
+| 12 oct. | globo terráqueo (Día de la Nación Pluricultural) |
+| 28 oct. – 2 nov. | catrina, cempasúchil y papel picado |
+| 12 dic. – 6 ene. | gorro de Navidad |
+| tu cumpleaños | pastel con velas, gorro y confeti (`koalaCientifico.cumpleanos` = `DD/MM`) |
+
+`koalaCientifico.temporada` fuerza cualquiera de ellas para verla cuando quieras.
 
 ## Tamagotchi
 Saciedad, ánimo y energía (se guardan entre sesiones). Comer (eucalipto), jugar (pelota),

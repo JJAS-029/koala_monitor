@@ -2,7 +2,7 @@
   "name": "koala-cientifico",
   "displayName": "Koala científico",
   "description": "Mascota koala de laboratorio que trabaja contigo y vigila tu consumo de Claude Code (sesión de 5 h y semana).",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "publisher": "josue-local",
   "license": "UNLICENSED",
   "engines": { "vscode": "^1.74.0" },
@@ -90,13 +90,23 @@
           "description": "Reaccionar al terminar pruebas, builds, migraciones o comandos de 15 s o más en la terminal (requiere la integración de shell de VS Code)."
         },
         "koalaCientifico.temporada": {
-          "type": "string", "default": "auto", "enum": ["auto", "muertos", "navidad", "patrias", "ninguna"],
-          "enumDescriptions": ["Según la fecha: Día de Muertos (28 oct.–2 nov.), Navidad (12 dic.–6 ene.) y fiestas patrias (13–16 sep.)", "Siempre de Día de Muertos", "Siempre de Navidad", "Siempre de fiestas patrias", "Sin disfraces"],
+          "type": "string", "default": "auto",
+          "enum": ["auto", "muertos", "navidad", "patrias", "anionuevo", "reyes", "marmota", "sanvalentin", "pi", "primavera", "nino", "madres", "programador", "pluricultural", "cumple", "ninguna"],
+          "enumDescriptions": [
+            "Según la fecha", "Día de Muertos (28 oct.–2 nov.)", "Navidad (12 dic.–6 ene.)", "Fiestas patrias (13–16 sep.)",
+            "Año nuevo (31 dic. y 1 ene.)", "Día de Reyes (6 ene.): rosca", "Día de la Marmota y la Candelaria (2 feb.): tamales",
+            "San Valentín (14 feb.)", "Día de Pi (14 mar.)", "Primavera (20–21 mar.)", "Día del Niño (30 abr.)", "Día de las Madres (10 may.)",
+            "Día del Programador (día 256 del año)", "Día de la Nación Pluricultural (12 oct.)", "Tu cumpleaños (koalaCientifico.cumpleanos)", "Sin disfraces"
+          ],
           "description": "Disfraz de temporada del koala."
         },
         "koalaCientifico.minutosParaSiesta": {
           "type": "number", "default": 20, "minimum": 0,
           "description": "Minutos sin actividad (editor, terminal ni Claude) para que el koala se duerma sobre la laptop. 0 = nunca."
+        },
+        "koalaCientifico.cumpleanos": {
+          "type": "string", "default": "", "pattern": "^$|^\\d{1,2}[/-]\\d{1,2}$",
+          "description": "Tu cumpleaños como DD/MM (p. ej. 29/03): ese día el koala tiene pastel y gorro de fiesta."
         },
         "koalaCientifico.servicios": {
           "type": "array", "default": [],

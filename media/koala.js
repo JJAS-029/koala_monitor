@@ -444,10 +444,139 @@
     if (n.saciedad < 35) return 'Tiene hambre: quiere eucalipto';
     if (n.animo < 35) return 'Está aburrido: quiere jugar';
     if (usoMaximo() >= 75) return 'Revisa tus mediciones con cuidado';
+    const fecha = TEXTO_TEMPORADA[est.temporada];
+    if (fecha && (k.t % 40) < 20) return fecha;
     if (ahoraLocal().getDay() === 5 && ahoraLocal().getHours() >= 16) return '¡Viernes por la tarde! 🎶';
     if (momentoDelDia() === 'noche') return 'Trabajando de noche… no te desveles';
     return 'Paseando por el laboratorio';
   }
+
+  const TEXTO_TEMPORADA = {
+    muertos: 'Día de Muertos: el koala va de catrina 💀🌼',
+    navidad: '¡Felices fiestas! 🎄',
+    patrias: '¡Viva México! 🇲🇽',
+    anionuevo: '¡Feliz año nuevo! 🎆',
+    reyes: 'Día de Reyes: ¿a quién le tocará el niño? 👑',
+    marmota: 'Día de la Marmota… ¿verá su sombra? (y es Candelaria: tamales) 🫔',
+    sanvalentin: 'Día del amor y la amistad 💕',
+    pi: 'Día de Pi: π ≈ 3.14159… 🥧',
+    primavera: '¡Llegó la primavera! 🌼',
+    nino: '¡Feliz Día del Niño! 🎈',
+    madres: '¡Feliz Día de las Madres! 💐',
+    programador: 'Día del Programador: día 256 del año (2⁸) 💻',
+    pluricultural: '12 de octubre: Día de la Nación Pluricultural 🌎',
+    cumple: '¡Feliz cumpleaños! 🎂',
+  };
+
+  // ---------- Decoraciones de fechas (detrás del koala) ----------
+  // decorarFecha(0) dibuja; decorarFecha(dt) solo lanza efectos (desde actualizar).
+  function decorarFecha(dt) {
+    const t = est.temporada;
+    if (dt) return efectosFecha(t, dt);
+    if (t === 'marmota') marmota();
+    else if (t === 'pi') pizarronPi();
+    else if (t === 'primavera') { flores(); mariposa(); }
+    else if (t === 'nino') globos();
+    else if (t === 'madres') floreroMadres();
+    else if (t === 'pluricultural') globoTerraqueo();
+    else if (t === 'cumple') pastel();
+  }
+  function efectosFecha(t, dt) {
+    if (t === 'anionuevo' && Math.random() < dt * 0.5) fuegoArtificial();
+    if (t === 'sanvalentin' && Math.random() < dt * 0.8) {
+      particulas.push({ tipo: 'corazon', x: azar(10, W - 10), y: suelo - 4, vx: azar(-6, 6), vy: -azar(15, 28), vida: 0, max: 2.2 });
+    }
+    if (t === 'programador' && Math.random() < dt * 6) {
+      particulas.push({ tipo: 'bit', uno: Math.random() < 0.5, x: azar(0, W), y: -6, vx: 0, vy: azar(25, 45), vida: 0, max: 3.5 });
+    }
+    if (t === 'cumple' && Math.random() < dt * 0.15) confeti(25);
+  }
+  function enFondo(x, f) { const prev = S; S = { ox: x, oy: suelo, sx: 1, sy: 1 }; f(); S = prev; }
+
+  // La marmota sale de su madriguera, mira su sombra y se vuelve a meter (ciclo de 9 s).
+  function marmota() {
+    const x = W - 5 * C;
+    const c = k.t % 9;
+    const alto = c < 1 ? c : c < 4 ? 1 : c < 5 ? 5 - c : 0; // 0 = escondida, 1 = afuera
+    enFondo(x, () => {
+      cel(-2, -0.4, 4, 0.6, '#4A3B2A'); // agujero
+      if (alto <= 0) return;
+      const h = 4 * alto;
+      cel(-1.3, -h, 2.6, h, '#8B6B47'); cel(-1, -h + 0.9, 2, h - 0.9, '#A7845A');
+      cel(-1.3, -h - 0.6, 0.7, 0.7, '#8B6B47'); cel(0.6, -h - 0.6, 0.7, 0.7, '#8B6B47'); // orejas
+      const mira = c > 2 && c < 3.5 ? -0.3 : 0; // voltea a ver su sombra
+      cel(-0.7 + mira, -h + 0.5, 0.4, 0.4, COL.negro); cel(0.3 + mira, -h + 0.5, 0.4, 0.4, COL.negro);
+      cel(-0.25 + mira, -h + 1.1, 0.5, 0.35, '#3A2A1A');
+      if (alto === 1) cel(-4.5, -0.25, 3, 0.25, '#000000', 0.25); // su sombra
+    });
+  }
+  const G_PI = ['XXXXXXX', '.X...X.', '.X...X.', '.X...X.', '.X...X.', 'X....X.'];
+  function pizarronPi() {
+    const x = 4 + 5 * C, y = suelo - 11 * C;
+    rect(x - 4 * C - 2, y - 2, 8 * C + 4, 6 * C + 4, COL.tallo);
+    rect(x - 4 * C, y, 8 * C, 6 * C, '#2F4F3A');
+    glifo(G_PI, x - 3.4 * C, y + 1.2 * C, 2.4, '#F2F2F2');
+    for (let i = 0; i < 3; i++) rect(x + 0.6 * C + i * 4, y + 4.2 * C, 2, 2, '#F2F2F2'); // ≈ 3.14…
+    rect(x - 2.5 * C, y + 6 * C + 2, 0.2 * C, 5 * C - 2, COL.tallo); rect(x + 2.3 * C, y + 6 * C + 2, 0.2 * C, 5 * C - 2, COL.tallo);
+  }
+  function flores() {
+    [0.08, 0.22, 0.78, 0.92].forEach((f, i) => enFondo(W * f, () => {
+      cel(-0.1, -2, 0.2, 2, COL.hoja);
+      const p = ['#FFD34D', '#F06292', COL.blanco, '#A77BE0'][i];
+      cel(-0.7, -2.9, 1.4, 1.4, p); cel(-0.25, -2.45, 0.5, 0.5, '#F28C1B');
+    }));
+  }
+  function mariposa() {
+    const x = W / 2 + Math.sin(k.t * 0.7) * W * 0.35, y = 30 + Math.sin(k.t * 2.1) * 12;
+    const ala = Math.floor(k.t * 10) % 2 ? 4 : 2;
+    rect(x - ala - 1, y - 3, ala, 5, '#F28C1B'); rect(x + 1, y - 3, ala, 5, '#F28C1B'); rect(x - 0.5, y - 3, 1.5, 6, COL.negro);
+  }
+  function globos() {
+    const base = W - 3 * C;
+    [[0, COL.rojo], [1.8, COL.lente], [3.6, '#FFD34D']].forEach(([dx, color], i) => {
+      const x = base - dx * C + Math.sin(k.t * 1.3 + i) * 3, y = 18 + i * 6 + Math.sin(k.t * 1.7 + i) * 3;
+      rect(x - 6, y - 8, 12, 14, color); rect(x - 4, y - 10, 8, 2, color); rect(x - 3, y - 6, 2, 3, COL.blanco, 0.6);
+      rect(x, y + 6, 1, suelo - y - 6, COL.borde, 0.6);
+    });
+  }
+  function floreroMadres() {
+    enFondo(4 + 3 * C, () => {
+      cel(-1.2, -2.6, 2.4, 2.6, COL.lente); cel(-0.8, -2.9, 1.6, 0.4, COL.lente);
+      [[-1.6, -5.5, '#F06292'], [0, -6.4, '#E85A7A'], [1.4, -5.2, '#F48FB1']].forEach(([fx, fy, c]) => {
+        cel(fx * 0.4, fy + 1.2, 0.2, -fy - 3.8, COL.hoja); cel(fx - 0.6, fy, 1.4, 1.3, c);
+      });
+    });
+  }
+  function globoTerraqueo() {
+    enFondo(4 + 3.5 * C, () => {
+      cel(-1.5, -0.5, 3, 0.5, COL.tallo); cel(-0.15, -2, 0.3, 1.5, COL.tallo);
+      cel(-2, -6.5, 4, 4, '#3B82C4'); cel(-1.5, -7, 3, 5, '#3B82C4'); cel(-2.5, -6, 5, 3, '#3B82C4');
+      const g = (k.t * 0.6) % 4; // los continentes giran
+      [[0, -6.2, 1.4, 1.2], [1.6, -4.8, 1.2, 1.4], [2.8, -5.8, 1, 0.9]].forEach(([cx, cy, w, h]) => {
+        const xx = ((cx + g) % 4.6) - 2.3;
+        if (xx + w > 2.4) return;
+        cel(xx, cy, w, h, '#5BC46A');
+      });
+    });
+  }
+  function pastel() {
+    enFondo(4 + 3.5 * C, () => {
+      cel(-2.2, -2.4, 4.4, 2.4, '#F8BBD0'); cel(-2.2, -2.6, 4.4, 0.5, COL.blanco); cel(-2.2, -1.2, 4.4, 0.3, COL.corazon);
+      [-1.3, 0, 1.3].forEach((vx, i) => {
+        cel(vx - 0.15, -3.6, 0.3, 1, [COL.lente, '#FFD34D', COL.verde][i]);
+        if (Math.random() > 0.15) cel(vx - 0.2, -4.2, 0.4, 0.5, '#FFB13B');
+      });
+    });
+  }
+  const COLORES_FUEGO = ['#FFD34D', '#E85A7A', '#7FD3F0', '#5BC46A', '#A77BE0'];
+  function fuegoArtificial() {
+    const x = azar(W * 0.15, W * 0.85), y = azar(15, 50), c = COLORES_FUEGO[Math.floor(Math.random() * COLORES_FUEGO.length)];
+    for (let i = 0; i < 22; i++) {
+      const a = (i / 22) * Math.PI * 2, v = azar(30, 55);
+      particulas.push({ tipo: 'fuego', color: c, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vida: 0, max: azar(0.8, 1.3) });
+    }
+  }
+  const G_CERO = ['XXX', 'X.X', 'X.X', 'X.X', 'XXX'], G_UNO = ['.X.', 'XX.', '.X.', '.X.', 'XXX'];
 
   // ---------- Hora del día ----------
   function ahoraLocal() { return est.horaPrueba ? new Date(est.horaPrueba) : new Date(); }
@@ -780,7 +909,7 @@
         max: 6,
         ini() {
           posturaBase();
-          k.texto = '¡Eucalipto!';
+          k.texto = est.temporada === 'marmota' ? '¡Tamales de Candelaria!' : est.temporada === 'reyes' ? '¡Rosca de Reyes! ¿Le saldrá el niño?' : '¡Eucalipto!';
           const lejos = k.x < W / 2 ? azar(W * 0.55, W - 9 * C) : azar(9 * C, W * 0.45);
           comida = comidaSoltada
             ? { x: Math.max(4 * C, Math.min(W - 4 * C, comidaSoltada.x)), alt: Math.max(0, comidaSoltada.alt), v: 0, hojas: 3, enSuelo: false }
@@ -918,6 +1047,7 @@
       const q = particulas[i];
       q.vida += dt;
       if (q.tipo === 'miga') q.vy += 160 * dt;
+      if (q.tipo === 'fuego') { q.vy += 40 * dt; q.vx *= 0.98; }
       q.x += q.vx * dt;
       q.y += q.vy * dt;
       if (q.tipo === 'z') q.x += Math.sin(q.vida * 3) * 0.3;
@@ -933,6 +1063,8 @@
       else if (q.tipo === 'burbuja') rect(q.x, q.y, 2, 2, COL.vidrio, a);
       else if (q.tipo === 'miga') rect(q.x, q.y, 2, 2, COL.hoja, a);
       else if (q.tipo === 'gota') rect(q.x, q.y, 2, 3, q.color, a);
+      else if (q.tipo === 'fuego') rect(q.x, q.y, 2, 2, q.color, a);
+      else if (q.tipo === 'bit') glifo(q.uno ? G_UNO : G_CERO, q.x, q.y, 1.5, COL.verde, a * 0.5);
       else if (q.tipo === 'polvo') rect(q.x, q.y, 3, 2, '#B9AE95', a * 0.8);
       else if (q.tipo === 'espuma') { const t = 2 + q.vida * 5; rect(q.x, q.y, t, t, COL.blanco, a * 0.9); }
       else if (q.tipo === 'vapor') rect(q.x, q.y, 2, 3, COL.blanco, a * 0.5);
@@ -1015,7 +1147,7 @@
       cel(5.5, -11.6, 0.9, 0.6, COL.verde);
     }
     if (k.hollin > 0) hollin(-2.6 + m * 0.5, 1.6 + m * 0.5, -6.7);
-    if (est.temporada === 'muertos') cempasuchil(-5.8, -10.8);
+    adornoOreja(-5.8, -10.8);
     sombrero(0, -10.2);
     medallas(-3.4, -3.4);
     if (est.temporada === 'patrias') monoTricolor(2, -3.8);
@@ -1026,6 +1158,19 @@
 
   // Gorro según temporada u hora (Navidad > pijama de noche).
   function sombrero(x, y) {
+    const t = est.temporada;
+    if (t === 'nino' || t === 'anionuevo' || t === 'cumple') { // gorro de fiesta a rayas
+      const c1 = t === 'anionuevo' ? '#FFD34D' : COL.corazon, c2 = t === 'anionuevo' ? COL.morado : COL.lente;
+      cel(x - 1.6, y - 0.2, 3.2, 1, c1); cel(x - 1.1, y - 1.2, 2.2, 1, c2); cel(x - 0.6, y - 2.2, 1.2, 1, c1);
+      cel(x - 0.5, y - 3, 1, 0.8, COL.blanco);
+      return;
+    }
+    if (t === 'reyes') { // corona
+      cel(x - 2.4, y - 0.2, 4.8, 1.2, '#FFD34D');
+      cel(x - 2.4, y - 1.2, 0.9, 1, '#FFD34D'); cel(x - 0.45, y - 1.4, 0.9, 1.2, '#FFD34D'); cel(x + 1.5, y - 1.2, 0.9, 1, '#FFD34D');
+      cel(x - 1.5, y + 0.2, 0.6, 0.6, COL.rojo); cel(x - 0.3, y + 0.2, 0.6, 0.6, COL.lente); cel(x + 0.9, y + 0.2, 0.6, 0.6, COL.verde);
+      return;
+    }
     if (est.temporada === 'navidad') {
       cel(x - 3.6, y + 0.6, 7.2, 1, COL.bata);
       cel(x - 3, y - 0.8, 6, 1.5, COL.rojo); cel(x - 1.5, y - 2, 4.5, 1.3, COL.rojo); cel(x + 2, y - 2.6, 2, 1, COL.rojo);
@@ -1098,6 +1243,16 @@
       cel(x - 0.9, y - 0.3, 0.3, 1.6, COL.ambar); cel(x + 1.6, y - 0.3, 0.3, 1.6, COL.ambar);
     }
   }
+  function adornoOreja(x, y) {
+    const t = est.temporada;
+    if (t === 'muertos') cempasuchil(x, y);
+    else if (t === 'sanvalentin') { // moño rosa
+      cel(x, y + 0.4, 0.9, 1, COL.corazon); cel(x + 1.1, y + 0.4, 0.9, 1, COL.corazon); cel(x + 0.8, y + 0.6, 0.5, 0.6, '#C2185B');
+    } else if (t === 'madres' || t === 'primavera') { // flor
+      const p = t === 'madres' ? '#F06292' : '#FFD34D';
+      cel(x + 0.5, y, 1, 1.8, p); cel(x, y + 0.4, 2, 1, p); cel(x + 0.65, y + 0.55, 0.7, 0.7, t === 'madres' ? '#FFD34D' : '#F28C1B');
+    }
+  }
   function cempasuchil(x, y) {
     const n = '#F28C1B', a = '#FFC93C';
     cel(x + 0.5, y, 1, 1.8, n); cel(x, y + 0.4, 2, 1, n);
@@ -1168,7 +1323,7 @@
     S = cuerpo;
     if (k.sudor) cel(-3.2, -6.6, 0.6, 1, COL.sudor);
     if (k.hollin > 0) hollin(-0.8, 2.3, -5.7);
-    if (est.temporada === 'muertos') cempasuchil(-6.4, -10.2);
+    adornoOreja(-6.4, -10.2);
     sombrero(1, -9.2);
     medallas(-1.6, -2.4);
     if (est.temporada === 'patrias') monoTricolor(2.4, -2.8);
@@ -1223,6 +1378,8 @@
   }
 
   function dibujarRama(x, y, hojas, escala) {
+    if (est.temporada === 'marmota') return dibujarTamal(x, y, hojas, escala);
+    if (est.temporada === 'reyes') return dibujarRosca(x, y, hojas, escala);
     const prev = S;
     S = { ox: x, oy: y, sx: escala, sy: escala };
     cel(-2.5, -0.5, 5, 0.5, COL.tallo);
@@ -1231,6 +1388,23 @@
       cel(pos[i][0], pos[i][1], 1.4, 0.9, COL.hoja);
       cel(pos[i][0] + 0.2, pos[i][1] + 0.6, 1, 0.2, COL.hojaS);
     }
+    S = prev;
+  }
+
+  function dibujarTamal(x, y, partes, escala) {
+    const prev = S; S = { ox: x, oy: y, sx: escala, sy: escala };
+    const largo = 1.4 + partes * 1.2; // se acorta con cada mordida
+    cel(-2.5, -1.6, largo + 0.4, 1.6, '#C9B27C'); // hoja de maíz
+    cel(-2.2, -1.3, largo - 0.3, 1, '#F2C94C'); // masa
+    cel(-2.6 + largo + 0.2, -1.4, 0.6, 1.2, '#A8925E'); cel(-2.9, -1.2, 0.5, 0.8, '#A8925E');
+    S = prev;
+  }
+  function dibujarRosca(x, y, partes, escala) {
+    const prev = S; S = { ox: x, oy: y, sx: escala, sy: escala };
+    const ancho = 2 + partes * 1.2;
+    cel(-ancho / 2, -1.8, ancho, 0.7, '#C98B3E'); cel(-ancho / 2, -0.7, ancho, 0.7, '#C98B3E');
+    cel(-ancho / 2, -1.8, 0.8, 1.8, '#C98B3E'); cel(ancho / 2 - 0.8, -1.8, 0.8, 1.8, '#C98B3E');
+    cel(-ancho / 2 + 0.6, -2, 0.6, 0.4, COL.rojo); cel(-0.2, -2, 0.6, 0.4, COL.verde); cel(ancho / 2 - 1.2, -2, 0.6, 0.4, '#FFD34D');
     S = prev;
   }
 
@@ -1432,6 +1606,7 @@
 
     const volteo = 1 - 0.5 * Math.sin(Math.PI * Math.min(1, k.tVolteo / 0.16));
     S = { ox: k.x + k.balanceo * C, oy: suelo - k.alt, sx: k.def.sx * volteo, sy: k.def.sy };
+    decorarFecha(0);
     dibujarLampara();
     const laptopAtras = k.laptop && k.brazos === 'atras';
     if (laptopAtras) dibujarLaptop();
@@ -1469,6 +1644,7 @@
     fisicaComida(dt);
     fisicaPelota(dt);
     moverParticulas(dt);
+    decorarFecha(dt);
     if ((k.modo === 'dormido' || k.modo === 'siesta') && Math.random() < dt * 0.9) zeta();
     pintarTexto();
   }

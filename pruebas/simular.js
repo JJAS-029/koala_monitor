@@ -504,6 +504,30 @@ escena('25-navidad-y-patrias', 47, (e, tomar) => {
   verificar(true, 'gorro de Navidad y moño tricolor sin errores');
 });
 
+escena('26-fechas', 51, (e, tomar) => {
+  const fechas = ['marmota', 'pluricultural', 'anionuevo', 'reyes', 'sanvalentin', 'pi', 'primavera', 'nino', 'madres', 'programador', 'cumple'];
+  for (const t of fechas) {
+    e.enviar(estado({ temporada: t }));
+    e.koala.k.t = t === 'marmota' ? 2.5 : 5; // marmota: a media salida
+    e.avanzar(1.2); tomar();
+  }
+  verificar(true, 'todas las fechas se dibujan');
+});
+
+escena('27-tamales-y-rosca', 52, (e, tomar) => {
+  e.enviar(estado({ temporada: 'marmota' }));
+  e.avanzar(0.3);
+  e.enviar({ tipo: 'accion', accion: 'comer' });
+  let tamal = false;
+  for (let i = 0; i < 10; i++) { e.avanzar(0.6); tomar(); tamal = tamal || /Tamales/.test(e.elementos['estado'].textContent); }
+  verificar(tamal, 'en Candelaria come tamales');
+  e.enviar(estado({ temporada: 'reyes' }));
+  e.enviar({ tipo: 'accion', accion: 'comer' });
+  let rosca = false;
+  for (let i = 0; i < 6; i++) { e.avanzar(0.6); tomar(); rosca = rosca || /Rosca/.test(e.elementos['estado'].textContent); }
+  verificar(rosca, 'en Reyes come rosca');
+});
+
 if (errores.length) {
   console.log(`\n${errores.length} verificación(es) fallaron`);
   process.exit(1);
