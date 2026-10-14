@@ -1,0 +1,117 @@
+{
+  "name": "koala-cientifico",
+  "displayName": "Koala científico",
+  "description": "Mascota koala de laboratorio que trabaja contigo y vigila tu consumo de Claude Code (sesión de 5 h y semana).",
+  "version": "0.8.0",
+  "publisher": "josue-local",
+  "license": "UNLICENSED",
+  "engines": { "vscode": "^1.74.0" },
+  "categories": ["Other"],
+  "extensionKind": ["workspace"],
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "views": {
+      "explorer": [
+        { "type": "webview", "id": "koalaCientifico.panel", "name": "Koala científico" }
+      ]
+    },
+    "commands": [
+      { "command": "koalaCientifico.mostrar", "title": "Koala científico: mostrar panel" },
+      { "command": "koalaCientifico.comer", "title": "Koala científico: dar de comer" },
+      { "command": "koalaCientifico.jugar", "title": "Koala científico: jugar" },
+      { "command": "koalaCientifico.mimar", "title": "Koala científico: mimar" },
+      { "command": "koalaCientifico.dormir", "title": "Koala científico: dormir / despertar" },
+      { "command": "koalaCientifico.trabajar", "title": "Koala científico: trabajar / descansar" },
+      { "command": "koalaCientifico.consumo", "title": "Koala científico: ver consumo de Claude" },
+      { "command": "koalaCientifico.configurar", "title": "Koala científico: configurar monitor de Claude Code" },
+      { "command": "koalaCientifico.pomodoro", "title": "Koala científico: iniciar / pausar pomodoro" },
+      { "command": "koalaCientifico.pomodoroDetener", "title": "Koala científico: detener pomodoro" },
+      { "command": "koalaCientifico.agregarServicio", "title": "Koala científico: vigilar un servicio (URL)" },
+      { "command": "koalaCientifico.consultarAnthropic", "title": "Koala científico: consultar uso real en Anthropic" }
+    ],
+    "configuration": {
+      "title": "Koala científico",
+      "properties": {
+        "koalaCientifico.segundosParaDescansar": {
+          "type": "number", "default": 10, "minimum": 2,
+          "description": "Segundos sin actividad en el editor o la terminal para que el koala deje de trabajar."
+        },
+        "koalaCientifico.reaccionarAClaude": {
+          "type": "boolean", "default": true,
+          "description": "El koala trabaja mientras Claude Code está en un turno (requiere los hooks del monitor)."
+        },
+        "koalaCientifico.avisarEnPorcentaje": {
+          "type": "number", "default": 90, "minimum": 50, "maximum": 100,
+          "description": "Porcentaje de uso (sesión o semana) a partir del cual el koala te avisa con una notificación."
+        },
+        "koalaCientifico.pomodoro.minutosEnfoque": {
+          "type": "number", "default": 25, "minimum": 1, "maximum": 120,
+          "description": "Minutos de cada experimento (bloque de enfoque) del pomodoro."
+        },
+        "koalaCientifico.pomodoro.minutosDescanso": {
+          "type": "number", "default": 5, "minimum": 1, "maximum": 60,
+          "description": "Minutos del descanso corto."
+        },
+        "koalaCientifico.pomodoro.minutosDescansoLargo": {
+          "type": "number", "default": 15, "minimum": 1, "maximum": 90,
+          "description": "Minutos del descanso largo."
+        },
+        "koalaCientifico.pomodoro.antesDeDescansoLargo": {
+          "type": "number", "default": 4, "minimum": 1, "maximum": 12,
+          "description": "Pomodoros antes de un descanso largo."
+        },
+        "koalaCientifico.usoDesdeAnthropic": {
+          "type": "boolean", "default": false,
+          "description": "Consultar el % real de sesión y semana en api.anthropic.com con la sesión de Claude Code guardada en este equipo (~/.claude/.credentials.json). El token solo se envía a Anthropic."
+        },
+        "koalaCientifico.minutosEntreConsultas": {
+          "type": "number", "default": 5, "minimum": 2, "maximum": 60,
+          "description": "Minutos entre consultas a Anthropic."
+        },
+        "koalaCientifico.aguaMlPorWh": {
+          "type": "number", "default": 2, "minimum": 0, "maximum": 15,
+          "description": "Mililitros de agua por Wh para la huella estimada (enfriamiento + generación eléctrica). Referencias: ~0.5 centro de datos eficiente; ~2 promedio citado; hasta 12 en sitios secos."
+        },
+        "koalaCientifico.costoPlanMensualUSD": {
+          "type": "number", "default": 0, "minimum": 0,
+          "description": "Lo que pagas al mes por tu plan de Claude (USD), para compararlo con el costo equivalente en la API. 0 = no comparar."
+        },
+        "koalaCientifico.avisarCuandoClaudeEspera": {
+          "type": "boolean", "default": true,
+          "description": "Notificación cuando Claude Code espera tu permiso o una respuesta (además de la mano levantada del koala)."
+        },
+        "koalaCientifico.avisarTurnoLargoSegundos": {
+          "type": "number", "default": 120, "minimum": 0,
+          "description": "Si un turno de Claude dura al menos estos segundos, el koala te avisa al terminar (notificación solo si VS Code no tiene el foco). 0 = nunca."
+        },
+        "koalaCientifico.reaccionarAComandos": {
+          "type": "boolean", "default": true,
+          "description": "Reaccionar al terminar pruebas, builds, migraciones o comandos de 15 s o más en la terminal (requiere la integración de shell de VS Code)."
+        },
+        "koalaCientifico.temporada": {
+          "type": "string", "default": "auto", "enum": ["auto", "muertos", "navidad", "patrias", "ninguna"],
+          "enumDescriptions": ["Según la fecha: Día de Muertos (28 oct.–2 nov.), Navidad (12 dic.–6 ene.) y fiestas patrias (13–16 sep.)", "Siempre de Día de Muertos", "Siempre de Navidad", "Siempre de fiestas patrias", "Sin disfraces"],
+          "description": "Disfraz de temporada del koala."
+        },
+        "koalaCientifico.minutosParaSiesta": {
+          "type": "number", "default": 20, "minimum": 0,
+          "description": "Minutos sin actividad (editor, terminal ni Claude) para que el koala se duerma sobre la laptop. 0 = nunca."
+        },
+        "koalaCientifico.servicios": {
+          "type": "array", "default": [],
+          "description": "Servicios que el koala vigila cada minuto (responde = verde). Ejemplo: { \"nombre\": \"Django\", \"url\": \"http://127.0.0.1:8000/\" }.",
+          "items": {
+            "type": "object",
+            "properties": { "nombre": { "type": "string" }, "url": { "type": "string" } },
+            "required": ["url"]
+          }
+        },
+        "koalaCientifico.barraDeEstado": {
+          "type": "boolean", "default": true,
+          "description": "Mostrar el consumo de Claude Code en la barra de estado de VS Code."
+        }
+      }
+    }
+  }
+}

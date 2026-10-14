@@ -1,0 +1,8 @@
+# Generados
+__pycache__/
+*.pyc
+capturas/
+node_modules/
+
+# Respaldos locales de settings.json
+*.koala-respaldo-*
