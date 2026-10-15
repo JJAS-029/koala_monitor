@@ -1,5 +1,10 @@
 # Registro de cambios
 
+## 1.2.0
+- El termómetro junto a la ventana muestra la **temperatura de afuera** (la del CPU queda en la pestaña Sistema).
+- Nuevo comando y botón **Elegir ciudad del clima**: escribes el nombre y escoges de una lista (distingue
+  ciudades con el mismo nombre). El koala no detecta tu ubicación por su cuenta.
+
 ## 1.1.0
 - **Ventana del laboratorio** con el cielo según la hora (amanecer, día, atardecer, noche con luna y
   estrellas) y el **clima real** de tu ciudad (Open-Meteo, opcional): nubes, lluvia, tormenta, nieve, niebla.

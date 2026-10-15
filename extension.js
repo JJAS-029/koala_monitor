@@ -852,9 +852,40 @@ function alEventoGit(ev) {
   });
 }
 
+// La ciudad se elige con el comando "Elegir ciudad del clima" (lista para distinguir homónimos) o se escribe a mano
+// en koalaCientifico.clima.ciudad. El koala NO detecta tu ubicación por su cuenta.
 async function medirClima() {
-  const ciudad = config().get('clima.ciudad', '');
-  climaActual = ciudad ? await monitor.clima(ciudad) : null;
+  const ciudad = String(config().get('clima.ciudad', '') || '').trim();
+  const elegido = contexto.globalState.get('koala.lugarClima');
+  if (!ciudad) { climaActual = null; return; }
+  climaActual = await monitor.clima(elegido && elegido.etiqueta === ciudad ? elegido : ciudad);
+}
+
+async function elegirCiudad() {
+  const texto = await vscode.window.showInputBox({
+    prompt: '¿En qué ciudad estás? (para el clima de la ventana del laboratorio)',
+    placeHolder: 'Toluca, Guadalajara, Monterrey…',
+    value: '',
+  });
+  if (texto === undefined) return;
+  if (!texto.trim()) {
+    await config().update('clima.ciudad', '', vscode.ConfigurationTarget.Global);
+    await contexto.globalState.update('koala.lugarClima', undefined);
+    vscode.window.showInformationMessage('🐨 Clima desactivado: la ventana solo seguirá la hora.');
+    return;
+  }
+  const opciones = await monitor.buscarCiudades(texto);
+  if (!opciones.length) { vscode.window.showWarningMessage(`🐨 No encontré "${texto}". Prueba con otro nombre.`); return; }
+  const r = await vscode.window.showQuickPick(
+    opciones.map((o) => ({ label: o.nombre, description: o.region, lugar: o })),
+    { placeHolder: 'Elige tu ciudad' });
+  if (!r) return;
+  const etiqueta = `${r.lugar.nombre}, ${r.lugar.region}`;
+  await contexto.globalState.update('koala.lugarClima', { ...r.lugar, etiqueta });
+  await config().update('clima.ciudad', etiqueta, vscode.ConfigurationTarget.Global);
+  await medirClima();
+  enviarEstado();
+  if (climaActual && !climaActual.error) vscode.window.showInformationMessage(`🐨 Clima de ${r.lugar.nombre}: ${climaActual.temp} °C.`);
 }
 
 function revisarRutina() {
@@ -899,6 +930,7 @@ class ProveedorVista {
       else if (msg.tipo === 'configurar') configurarMonitor();
       else if (msg.tipo === 'agregarServicio') agregarServicio();
       else if (msg.tipo === 'activarApi') activarApi();
+      else if (msg.tipo === 'elegirCiudad') elegirCiudad();
       else if (msg.tipo === 'agua') { if (rutina) rutina.agua(); enviarEstado(); }
       else if (msg.tipo === 'visita') { if (rutina) rutina.alVisita(); }
       else if (msg.tipo === 'consultarApi') consultarAnthropic(true);
@@ -1374,6 +1406,7 @@ function activate(ctx) {
   const relojClima = setInterval(() => medirClima().then(enviarEstado), 15 * 60000);
   ctx.subscriptions.push({ dispose() { clearInterval(relojRutina); clearInterval(relojClima); } });
   comando('koalaCientifico.agua', () => { rutina.agua(); enviarEstado(); });
+  comando('koalaCientifico.elegirCiudad', elegirCiudad);
   // Commits y pushes: el koala festeja (y se alegra: más ánimo).
   monitor.vigilarGit(alEventoGit).then((d) => ctx.subscriptions.push(d), () => {});
   const relojUso = setInterval(escanearTranscripciones, 60 * 1000);

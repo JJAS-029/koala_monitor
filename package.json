@@ -2,7 +2,7 @@
   "name": "koala-cientifico",
   "displayName": "Koala científico",
   "description": "Mascota koala de laboratorio que trabaja contigo y mide tu uso de Claude Code: límites de sesión y semana, ritmo, costo equivalente, pomodoro, git y servidor.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "jjas-029",
   "license": "MIT",
   "icon": "media/icono.png",
@@ -106,6 +106,10 @@
       {
         "command": "koalaCientifico.agua",
         "title": "Koala científico: tomé un vaso de agua"
+      },
+      {
+        "command": "koalaCientifico.elegirCiudad",
+        "title": "Koala científico: elegir ciudad del clima"
       }
     ],
     "configuration": {
@@ -254,7 +258,7 @@
         "koalaCientifico.clima.ciudad": {
           "type": "string",
           "default": "",
-          "description": "Tu ciudad para el clima real en la ventana del laboratorio (Open-Meteo, gratis y sin cuenta; necesita internet). Vacío = sin clima, solo el cielo según la hora."
+          "description": "Ciudad del clima en la ventana del laboratorio. Mejor usa el comando «Koala científico: elegir ciudad del clima» (te deja escoger entre ciudades con el mismo nombre). Vacío = sin clima. Usa Open-Meteo (gratis, sin cuenta; necesita internet). El koala no detecta tu ubicación por su cuenta."
         },
         "koalaCientifico.metaAgua": {
           "type": "number",

@@ -843,25 +843,29 @@
     const x = a.match(/\d+/g).map(Number), y = b.match(/\d+/g).map(Number);
     return 'rgb(' + x.map((v, i) => Math.round(v + (y[i] - v) * p)).join(',') + ')';
   }
-  // Termómetro de pared con la temperatura del servidor (o la de afuera si el servidor no la da).
+  // Termómetro de pared con la temperatura de afuera (clima de la ciudad elegida). Sin ciudad, no aparece.
   const DIGITOS = [
     ['XXX', 'X.X', 'X.X', 'X.X', 'XXX'], ['.X.', 'XX.', '.X.', '.X.', 'XXX'], ['XXX', '..X', 'XXX', 'X..', 'XXX'], ['XXX', '..X', 'XXX', '..X', 'XXX'],
     ['X.X', 'X.X', 'XXX', '..X', '..X'], ['XXX', 'X..', 'XXX', '..X', 'XXX'], ['XXX', 'X..', 'XXX', 'X.X', 'XXX'], ['XXX', '..X', '.X.', '.X.', '.X.'],
     ['XXX', 'X.X', 'XXX', 'X.X', 'XXX'], ['XXX', 'X.X', 'XXX', '..X', 'XXX'],
   ];
+  const G_MENOS = ['...', '...', 'XXX', '...', '...'], G_GRADO = ['XX', 'XX'];
   function dibujarTermometro(v) {
-    const servidor = est.sistema && est.sistema.temperatura;
-    const temp = servidor != null ? servidor : est.clima && est.clima.temp;
-    if (temp == null) return;
+    const cl = est.clima;
+    if (!cl || cl.error || cl.temp == null) return;
+    const temp = cl.temp;
     const x = v.x - 16, y = v.y + 2, alto = v.h - 6;
-    const min = servidor != null ? 20 : -5, max = servidor != null ? 95 : 40;
-    const frac = Math.max(0.05, Math.min(1, (temp - min) / (max - min)));
-    const color = servidor != null ? (temp >= 80 ? COL.rojo : temp >= 65 ? COL.ambar : COL.verde) : COL.rojo;
+    const frac = Math.max(0.06, Math.min(1, (temp + 5) / 45)); // escala de −5 a 40 °C
+    const color = temp <= 10 ? '#5DADE2' : temp >= 30 ? COL.rojo : temp >= 24 ? COL.ambar : COL.verde;
     rect(x, y, 5, alto, '#E8ECEF'); rect(x + 1, y + 1, 3, alto - 2, '#C9CED4');
     rect(x + 1, y + 1 + (alto - 2) * (1 - frac), 3, (alto - 2) * frac, color);
     rect(x - 1, y + alto - 1, 7, 6, color);
-    String(Math.round(temp)).split('').forEach((c, i) => { const g = DIGITOS[Number(c)]; if (g) glifo(g, x - 2 + i * 4, y + alto + 7, 1, colorSuelo, 0.85); });
+    const texto = String(Math.round(temp));
+    let cx = x - 3;
+    texto.split('').forEach((c) => { glifo(c === '-' ? G_MENOS : DIGITOS[Number(c)], cx, y + alto + 7, 1, colorSuelo, 0.85); cx += 4; });
+    glifo(G_GRADO, cx, y + alto + 7, 1, colorSuelo, 0.85);
   }
+
 
   // Estante de matraces: uno lleno por cada pomodoro de hoy (máx. 8).
   function dibujarEstante() {

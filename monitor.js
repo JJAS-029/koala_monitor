@@ -80,8 +80,21 @@ function pedirJson(url) {
     req.on('error', () => resolver(null));
   });
 }
-async function clima(ciudad) {
-  ciudad = String(ciudad || '').trim();
+// Ciudades que coinciden con un texto (para que el usuario elija la suya).
+async function buscarCiudades(texto) {
+  const g = await pedirJson(`https://geocoding-api.open-meteo.com/v1/search?count=8&language=es&name=${encodeURIComponent(String(texto).trim())}`);
+  return ((g && g.results) || []).map((r) => ({
+    nombre: r.name, region: [r.admin1, r.country].filter(Boolean).join(', '), lat: r.latitude, lon: r.longitude,
+  }));
+}
+
+// `lugar` puede ser un lugar ya elegido { nombre, lat, lon } o el texto de una ciudad (se usa la primera coincidencia).
+async function clima(lugar) {
+  if (lugar && typeof lugar === 'object' && Number.isFinite(lugar.lat)) {
+    lugarClima = { ciudad: `${lugar.lat},${lugar.lon}`, lat: lugar.lat, lon: lugar.lon, nombre: lugar.nombre };
+    lugar = lugarClima.ciudad;
+  }
+  const ciudad = String(lugar || '').trim();
   if (!ciudad) return null;
   if (!lugarClima || lugarClima.ciudad !== ciudad) {
     const g = await pedirJson(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=es&name=${encodeURIComponent(ciudad)}`);
@@ -263,4 +276,4 @@ function diagnosticos() {
   return { errores, avisos, archivos };
 }
 
-module.exports = { clima, leerSistema, revisarServicios, resumenGit, diagnosticos, apiGit, vigilarGit, racha };
+module.exports = { clima, buscarCiudades, leerSistema, revisarServicios, resumenGit, diagnosticos, apiGit, vigilarGit, racha };

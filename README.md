@@ -23,8 +23,8 @@ La mascota, el pomodoro y las pestañas Hoy y Sistema funcionan sin configurar n
 
 ## Privacidad
 Todo se queda en tu computadora salvo lo que actives tú:
-- **Clima (desactivado por omisión)**: si escribes tu ciudad, se consulta Open-Meteo con ese nombre y
-  sus coordenadas, cada 15 min.
+- **Clima (desactivado por omisión)**: solo si eliges una ciudad; se consultan Open-Meteo con ese nombre
+  y sus coordenadas cada 15 min. No se usa tu IP ni tu ubicación.
 - Lee tus transcripciones de Claude Code (`~/.claude/projects`) **solo para contar tokens**,
   modelos, herramientas y horas; no lee ni envía el contenido de las conversaciones.
 - *Configurar monitor* agrega a `~/.claude/settings.json` una status line y hooks (con respaldo
@@ -118,12 +118,12 @@ baila con el mensaje del commit; con cada **push** lanza un cohete. Cada uno sub
   esquina para darle de comer donde la sueltes. Un clic sin arrastrar lo mima.
 
 ## El laboratorio a lo largo del día
-- **Ventana**: el cielo cambia con la hora (amanecer, día, atardecer, noche con luna y estrellas). Con
-  `koalaCientifico.clima.ciudad` (p. ej. `Toluca`) muestra el clima real: nubes, lluvia, tormenta, nieve o
-  niebla (Open-Meteo, gratis y sin cuenta; necesita internet). El koala saca paraguas, se abanica o se
-  pone bufanda según el clima.
-- **Termómetro** junto a la ventana con la temperatura del CPU del servidor (si el sistema la expone;
-  si no, la de afuera).
+- **Ventana**: el cielo cambia con la hora (amanecer, día, atardecer, noche con luna y estrellas).
+- **Clima y termómetro**: con *Koala científico: elegir ciudad del clima* (o el botón de la pestaña
+  Sistema) escribes tu ciudad y la escoges de una lista. La ventana muestra el clima real (nubes, lluvia,
+  tormenta, nieve, niebla), el termómetro junto a ella marca la temperatura de afuera y el koala saca
+  paraguas, se abanica o se pone bufanda. Usa Open-Meteo (gratis, sin cuenta; necesita internet). **El
+  koala no detecta tu ubicación**: solo usa la ciudad que tú eliges. La temperatura del CPU está en Sistema.
 - **Rutina**: buenos días con café y un resumen (semana de Claude, racha, cambios pendientes); hora de
   la comida; **pausa activa** tras `koalaCientifico.minutosPausaActiva` (90) min seguidos; despedida al
   final del día con lo que hiciste.

@@ -304,11 +304,14 @@
         '<div class="nota">Encendido hace ' + (s.encendido >= 172800 ? Math.floor(s.encendido / 86400) + ' días' : duracion(s.encendido)) + '</div>');
     }
     const cl = est.clima;
-    html += tarjeta('Clima', cl && !cl.error
-      ? '<div class="cifras">' + cifra(cl.temp + ' °C', esc(cl.nombre || '')) + cifra(({ despejado: '☀️', nublado: '⛅', niebla: '🌫️', lluvia: '🌧️', tormenta: '⛈️', nieve: '❄️' })[cl.tipo] || '·', cl.tipo) + '</div>' +
-        '<div class="nota">Open-Meteo · se ve en la ventana del laboratorio</div>'
+    const ICONO_CLIMA = { despejado: '☀️', nublado: '⛅', niebla: '🌫️', lluvia: '🌧️', tormenta: '⛈️', nieve: '❄️' };
+    const cuerpoClima = cl && !cl.error
+      ? '<div class="cifras">' + cifra(cl.temp + ' °C', cl.nombre || '') + cifra(ICONO_CLIMA[cl.tipo] || '·', cl.tipo) + '</div>' +
+        '<div class="nota">Open-Meteo · se ve en la ventana y el termómetro del laboratorio</div>'
       : '<div class="nota">' + (cl && cl.error ? '⚠ ' + esc(cl.error) + '. ' : '') +
-        'Escribe tu ciudad en <code>koalaCientifico.clima.ciudad</code> para ver el clima real en la ventana (necesita internet).</div>');
+        'Elige tu ciudad para ver el clima real en la ventana y el termómetro (necesita internet). El koala no detecta tu ubicación por su cuenta.</div>';
+    html += tarjeta('Clima', cuerpoClima +
+      '<button class="boton-chico" data-msg="elegirCiudad">' + (cl && !cl.error ? 'Cambiar ciudad' : 'Elegir ciudad') + '</button>');
     const lista = est.servicios || [];
     const filas = lista.map((x) => '<div class="servicio" title="' + esc(x.url) + '"><span class="luz' + (x.ok ? '' : ' mal') + '"></span>' +
       '<span class="nom">' + esc(x.nombre) + '</span><span class="val">' + esc(x.ok ? (x.ms + ' ms') : x.detalle) + '</span>' +
