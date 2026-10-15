@@ -1,5 +1,10 @@
 # Registro de cambios
 
+## 1.2.1
+- Corrige el clima con la ciudad escrita completa ("Toluca de Lerdo, Estado de México, México"): se busca por
+  el nombre y la región elige entre homónimos.
+- Si falla la red, reintenta al minuto y conserva el último dato bueno (antes se quedaba 15 min sin clima).
+
 ## 1.2.0
 - El termómetro junto a la ventana muestra la **temperatura de afuera** (la del CPU queda en la pestaña Sistema).
 - Nuevo comando y botón **Elegir ciudad del clima**: escribes el nombre y escoges de una lista (distingue

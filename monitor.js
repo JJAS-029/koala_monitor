@@ -97,14 +97,23 @@ async function clima(lugar) {
   const ciudad = String(lugar || '').trim();
   if (!ciudad) return null;
   if (!lugarClima || lugarClima.ciudad !== ciudad) {
-    const g = await pedirJson(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=es&name=${encodeURIComponent(ciudad)}`);
-    const r = g && g.results && g.results[0];
-    if (!r) return { error: `No encontré "${ciudad}"` };
-    lugarClima = { ciudad, lat: r.latitude, lon: r.longitude, nombre: r.name };
+    // "Toluca de Lerdo, Estado de México, México": el buscador solo entiende el nombre; la región sirve para
+    // escoger entre ciudades homónimas.
+    const [nombre, ...resto] = ciudad.split(',').map((t) => t.trim()).filter(Boolean);
+    const region = resto.join(' ').toLowerCase();
+    let opciones = await buscarCiudades(nombre);
+    if (!opciones.length) opciones = await buscarCiudades(nombre); // un reintento: la red a veces falla
+    if (!opciones.length) return { error: `No encontré "${nombre}"`, reintentar: true };
+    const r = (region && opciones.find((o) => region.includes((o.region.split(',')[0] || '').toLowerCase()))) || opciones[0];
+    lugarClima = { ciudad, lat: r.lat, lon: r.lon, nombre: r.nombre };
   }
-  const d = await pedirJson(`https://api.open-meteo.com/v1/forecast?latitude=${lugarClima.lat}&longitude=${lugarClima.lon}` +
+  let d = await pedirJson(`https://api.open-meteo.com/v1/forecast?latitude=${lugarClima.lat}&longitude=${lugarClima.lon}` +
     '&current=temperature_2m,weather_code,is_day,precipitation&timezone=auto');
-  if (!d || !d.current) return { error: 'Sin respuesta del servicio del clima', nombre: lugarClima.nombre };
+  if (!d || !d.current) {
+    d = await pedirJson(`https://api.open-meteo.com/v1/forecast?latitude=${lugarClima.lat}&longitude=${lugarClima.lon}` +
+      '&current=temperature_2m,weather_code,is_day,precipitation&timezone=auto');
+  }
+  if (!d || !d.current) return { error: 'Sin respuesta del servicio del clima', nombre: lugarClima.nombre, reintentar: true };
   const c = d.current.weather_code;
   // Códigos WMO: 0 despejado, 1–3 nubes, 45–48 niebla, 51–67 y 80–82 lluvia, 71–77 y 85–86 nieve, 95–99 tormenta.
   const tipo = c >= 95 ? 'tormenta' : (c >= 71 && c <= 77) || c === 85 || c === 86 ? 'nieve'

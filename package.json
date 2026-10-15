@@ -2,7 +2,7 @@
   "name": "koala-cientifico",
   "displayName": "Koala científico",
   "description": "Mascota koala de laboratorio que trabaja contigo y mide tu uso de Claude Code: límites de sesión y semana, ritmo, costo equivalente, pomodoro, git y servidor.",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "publisher": "jjas-029",
   "license": "MIT",
   "icon": "media/icono.png",

@@ -858,8 +858,16 @@ async function medirClima() {
   const ciudad = String(config().get('clima.ciudad', '') || '').trim();
   const elegido = contexto.globalState.get('koala.lugarClima');
   if (!ciudad) { climaActual = null; return; }
-  climaActual = await monitor.clima(elegido && elegido.etiqueta === ciudad ? elegido : ciudad);
+  const nuevo = await monitor.clima(elegido && elegido.etiqueta === ciudad ? elegido : ciudad);
+  // Si falla la red, se conserva el último dato bueno (hasta 1 h) y se reintenta en 1 min, no en 15.
+  if (nuevo && nuevo.reintentar) {
+    clearTimeout(reintentoClima);
+    reintentoClima = setTimeout(() => medirClima().then(enviarEstado), 60000);
+    if (climaActual && !climaActual.error && Date.now() - climaActual.ts < HORA) return;
+  }
+  climaActual = nuevo;
 }
+let reintentoClima = null;
 
 async function elegirCiudad() {
   const texto = await vscode.window.showInputBox({
