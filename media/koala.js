@@ -39,9 +39,16 @@
     if (k) k.x = Math.max(7 * C, Math.min(W - 7 * C, k.x));
   }
 
+  let recorte = null; // { x, y, w, h }: solo se pinta dentro (p. ej. lo que se ve por la ventana)
   function rect(x, y, w, h, color, alfa) {
     if (w < 0) { x += w; w = -w; }
     if (h < 0) { y += h; h = -h; }
+    if (recorte) {
+      const x2 = Math.min(x + w, recorte.x + recorte.w), y2 = Math.min(y + h, recorte.y + recorte.h);
+      x = Math.max(x, recorte.x); y = Math.max(y, recorte.y);
+      w = x2 - x; h = y2 - y;
+      if (w <= 0 || h <= 0) return;
+    }
     const x0 = Math.round(x * dpr), y0 = Math.round(y * dpr);
     const x1 = Math.round((x + w) * dpr), y1 = Math.round((y + h) * dpr);
     if (x1 <= x0 || y1 <= y0) return;
@@ -104,8 +111,14 @@
   function ojosBase() {
     const n = est.necesidades;
     if (usoMaximo() >= est.umbral || Math.min(n.saciedad, n.animo) < 20) return 'tristes';
+    // Código impecable: de vez en cuando sonríe solo.
+    if (est.rutina && est.rutina.diasSinErrores >= 2 && (k.t % 12) < 2.5) return 'felices';
     return 'abiertos';
   }
+  const cambiosPendientes = () => (est.git || []).reduce((n, g) => n + (g.cambios || 0), 0);
+  const nervioso = () => cambiosPendientes() >= 20;
+  const lloviendo = () => !!(est.clima && (est.clima.tipo === 'lluvia' || est.clima.tipo === 'tormenta'));
+  const NOMBRE_CLIMA = { despejado: 'despejado', nublado: 'nublado', niebla: 'con niebla', lluvia: 'lloviendo', tormenta: 'con tormenta', nieve: 'nevando' };
 
   // ---------- Motor de pasos ----------
   // Un paso = { d: segundos, ini(), act(p, dt, t), hasta(), fin(), libre: interrumpible }
@@ -215,7 +228,14 @@
     if (a === 'jugar') return jugar();
     if (a === 'mimar') return mimar();
     if (a === 'festejar') return bailar(true);
-    if (a === 'festejarPomodoro') return bailar(true, '¡Experimento terminado! Hora de descansar');
+    if (a === 'festejarPomodoro') { sonar('pomodoro'); return bailar(true, '¡Experimento terminado! Hora de descansar'); }
+    if (a === 'buenosDias') return buenosDias(datosAccion.buenosDias || {});
+    if (a === 'despedida') return despedida(datosAccion.despedida || {});
+    if (a === 'lonche') return lonche();
+    if (a === 'pausaActiva') return pausaActiva(datosAccion.pausaActiva || {});
+    if (a === 'tomarAgua') return tomarAgua(datosAccion.tomarAgua || {});
+    if (a === 'logro') return festejarLogro(datosAccion.logro || {});
+    if (a === 'visitaPrueba') { visita = null; proximaVisita = 0; return descansar(); }
     if (a === 'pedirAtencion') return saltar();
     if (a === 'errores0') return barrer(datosAccion.errores0 || {});
     if (a === 'servicioCaido') return apagarFuego(datosAccion.servicioCaido || {});
@@ -420,6 +440,9 @@
       [3, pasear], [2, mirarLados], [1, saltar], [viernes ? 4 : 1, () => bailar(false)],
       [1, saludar], [2, descansar], [1.5, revisarMatraz],
       [momentoDelDia() === 'manana' ? 2.5 : 0, tomarCafe],
+      [nervioso() ? 3 : 0, mirarLados],
+      [lloviendo() ? 2 : 0, paraguas],
+      [est.clima && est.clima.temp >= 30 ? 2 : 0, abanicarse],
     ];
     let total = opciones.reduce((s, o) => s + o[0], 0);
     let r = Math.random() * total;
@@ -435,6 +458,13 @@
     if (al && al.nivel >= 2) return al.texto;
     const corte = minutosAlCorte();
     if (corte !== null) return '⏳ Corte de la sesión en ' + corte + ' min';
+    const temp = est.sistema && est.sistema.temperatura;
+    if (temp >= 80) return '🔥 El servidor está a ' + temp + ' °C';
+    if (nervioso()) return '😬 Muchos cambios sin commit (' + cambiosPendientes() + ')…';
+    const r0 = est.rutina;
+    if (r0 && r0.diasSinErrores >= 2 && (k.t % 30) < 10) return '✨ ' + r0.diasSinErrores + ' días sin errores en el proyecto';
+    const cl = est.clima;
+    if (cl && cl.temp != null && (k.t % 45) < 12) return 'Afuera: ' + cl.temp + ' °C, ' + NOMBRE_CLIMA[cl.tipo] + (cl.nombre ? ' en ' + cl.nombre : '');
     const r = est.racha && est.racha.dias;
     if (r >= 3 && !est.racha.hoy && ahoraLocal().getHours() >= 17) return '🏅 Racha de ' + r + ' días: ¡no la rompas hoy!';
     if (usoMaximo() >= est.umbral) return '¡Casi al límite de Claude Code!';
@@ -577,6 +607,274 @@
     }
   }
   const G_CERO = ['XXX', 'X.X', 'X.X', 'X.X', 'XXX'], G_UNO = ['.X.', 'XX.', '.X.', '.X.', 'XXX'];
+
+  // ---------- Rutina del día ----------
+  function buenosDias(d) {
+    const ideas = [];
+    if (d.semana != null) ideas.push('Llevas ' + d.semana + ' % de tu semana de Claude');
+    if (d.racha) ideas.push('Racha de ' + d.racha + ' día' + (d.racha === 1 ? '' : 's') + ' con commits 🏅');
+    if (d.cambios) ideas.push('Quedaron ' + d.cambios + ' cambio' + (d.cambios === 1 ? '' : 's') + ' sin commit');
+    if (!ideas.length) ideas.push('¡A darle!');
+    cola.push(
+      esperar(0.01, { ini() { posturaBase(); k.x = -6 * C; k.texto = '☀️ ¡Buenos días!'; } }),
+      caminarA(W * 0.42, false, 45),
+      esperar(0.9, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'cerrados'; k.boca = true; k.texto = '*bostezo*'; }, fin() { k.boca = false; } }),
+      esperar(0.3, { ini() { posturaBase(); } })
+    );
+    tomarCafe();
+    ideas.forEach((t) => cola.push(esperar(2.4, { ini() { k.texto = t; k.ojos = 'felices'; k.brazos = 'saludo'; }, fin() { posturaBase(); } })));
+  }
+  function despedida(d) {
+    const partes = [];
+    if (d.commitsHoy) partes.push(d.commitsHoy + ' commit' + (d.commitsHoy === 1 ? '' : 's'));
+    if (d.pomodoros) partes.push(d.pomodoros + ' pomodoro' + (d.pomodoros === 1 ? '' : 's'));
+    if (d.activo) partes.push(Math.floor(d.activo / 3600) + ' h ' + Math.floor((d.activo % 3600) / 60) + ' min activo');
+    cola.push(
+      esperar(2.6, { ini() { posturaBase(); k.brazos = 'saludo'; k.ojos = 'felices'; k.texto = '🌙 ¡Buen trabajo hoy!' + (partes.length ? ' ' + partes.join(', ') + '.' : ''); } }),
+      esperar(1.6, { ini() { k.brazos = 'saludo'; k.texto = '¡Hasta mañana!'; }, fin() { posturaBase(); } }),
+      esperar(0.9, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'cerrados'; k.texto = '*bostezo*'; }, fin() { posturaBase(); } })
+    );
+  }
+  function lonche() {
+    cola.push(esperar(0.01, { ini() { posturaBase(); k.texto = 'Hora de la comida 🥪'; k.sosteniendo = 'torta'; k.mordidas = 3; k.ojos = 'felices'; } }));
+    for (let i = 0; i < 3; i++) {
+      cola.push(
+        esperar(0.35, { ini() { ponerPose('aplastado'); k.boca = true; k.ojos = 'cerrados'; } }),
+        esperar(0.45, { ini() { ponerPose('frente'); k.boca = false; k.ojos = 'felices'; k.mordidas = 2 - i; } })
+      );
+    }
+    cola.push(esperar(0.8, { ini() { k.sosteniendo = null; k.texto = '¡Provecho! Tú también come algo'; }, fin() { posturaBase(); } }));
+  }
+  function pausaActiva(d) {
+    const h = Math.floor((d.minutos || 90) / 60), m = (d.minutos || 90) % 60;
+    const texto = 'Llevas ' + (h ? h + ' h ' : '') + m + ' min seguidos: ¡estírate conmigo! 🙆';
+    cola.push(
+      esperar(1.2, { ini() { posturaBase(); k.texto = texto; ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'cerrados'; } }),
+      esperar(1.4, { act(p) { k.balanceo = Math.sin(p * Math.PI * 2) * 1.4; }, fin() { k.balanceo = 0; } }),
+      esperar(0.6, { ini() { ponerPose('aplastado'); k.brazos = 'normal'; } }),
+      esperar(1.0, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'felices'; } }),
+      esperar(0.4, { ini() { posturaBase(); k.texto = 'Y toma agua 💧'; } })
+    );
+  }
+  function tomarAgua(d) {
+    cola.push(esperar(2, {
+      ini() { posturaBase(); k.sosteniendo = 'vaso'; k.brazos = 'frasco'; k.texto = '💧 Vaso ' + (d.vasos || 1) + (d.meta ? ' de ' + d.meta : ''); },
+      act(p) { k.ojos = p > 0.3 && p < 0.7 ? 'cerrados' : 'felices'; k.nivelVaso = 1 - Math.min(1, Math.max(0, (p - 0.3) / 0.4)); },
+      fin() { posturaBase(); },
+    }));
+  }
+  function festejarLogro(d) {
+    sonar('logro');
+    cola.push(
+      esperar(0.01, { ini() { posturaBase(); k.texto = '🏅 ¡Logro: ' + (d.nombre || '') + '!'; k.sosteniendo = 'trofeo'; k.brazos = 'arriba-der'; k.ojos = 'felices'; confeti(40); } }),
+      ...salto(16, 0.45, { ini() { ponerPose('estirado'); k.brazos = 'arriba-der'; k.sosteniendo = 'trofeo'; } }),
+      esperar(1.6, { ini() { ponerPose('frente'); k.brazos = 'arriba-der'; k.sosteniendo = 'trofeo'; }, fin() { posturaBase(); } })
+    );
+  }
+  function paraguas() {
+    cola.push(esperar(3, { libre: true, ini() { k.texto = 'Afuera llueve ☔'; k.sosteniendo = 'paraguas'; k.brazos = 'arriba-der'; k.mirar = -1; }, fin() { k.sosteniendo = null; k.brazos = 'normal'; } }));
+  }
+  function abanicarse() {
+    cola.push(esperar(2.6, {
+      libre: true,
+      ini() { k.texto = '¡Qué calor! ' + est.clima.temp + ' °C 🥵'; k.sosteniendo = 'abanico'; k.brazos = 'frasco'; k.sudor = true; },
+      fin() { k.sosteniendo = null; k.brazos = 'normal'; k.sudor = false; },
+    }));
+  }
+
+  // ---------- Sonidos (WebAudio, sin archivos) ----------
+  let audio = null;
+  const TONOS = { listo: [660, 880], pomodoro: [523, 659, 784], commit: [784, 988], logro: [523, 659, 784, 1047], fallo: [330, 247] };
+  function sonar(tipo) {
+    if (!est.sonidos || typeof AudioContext === 'undefined') return;
+    try {
+      audio = audio || new AudioContext();
+      (TONOS[tipo] || [660]).forEach((f, i) => {
+        const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + i * 0.12;
+        o.type = 'square'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.04, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+        o.connect(g).connect(audio.destination); o.start(t); o.stop(t + 0.12);
+      });
+    } catch (e) { /* sin audio */ }
+  }
+
+  // ---------- Visitantes: panda, ajolote o tlacuache ----------
+  let visita = null; // { tipo, modo: 'suelo'|'ventana', x, dir, t }
+  let proximaVisita = 6 * 60 + Math.random() * 6 * 60; // primera visita entre 6 y 12 min
+  const VISITANTES = ['panda', 'ajolote', 'tlacuache'];
+  function moverVisita(dt) {
+    if (!est.visitantes) return;
+    if (!visita) {
+      proximaVisita -= dt;
+      if (proximaVisita > 0 || k.modo !== 'libre') return;
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      const modo = Math.random() < 0.5 ? 'suelo' : 'ventana';
+      visita = { tipo: VISITANTES[Math.floor(Math.random() * VISITANTES.length)], modo, dir, t: 0, x: dir > 0 ? -6 * C : W + 6 * C, saludo: false };
+      if (modo === 'ventana') { const v = ventanaRect(); visita.x = dir > 0 ? v.x - 8 : v.x + v.w + 8; }
+      vscode.postMessage({ tipo: 'visita' });
+      return;
+    }
+    visita.t += dt;
+    const v = ventanaRect();
+    const vel = visita.modo === 'ventana' ? 14 : 28;
+    const cerca = visita.modo === 'suelo' ? Math.abs(visita.x - k.x) < 14 * C : Math.abs(visita.x - (v.x + v.w / 2)) < 6;
+    if (cerca && !visita.saludo) {
+      visita.saludo = true; visita.pausa = 2.2;
+      if (k.modo === 'libre') {
+        interrumpirLibre();
+        cola.push(esperar(2, { ini() { posturaBase(); k.brazos = 'saludo'; k.ojos = 'felices'; k.mirar = visita.x > k.x ? 1 : -1; k.texto = '¡Hola, ' + visita.tipo + '! 👋'; }, fin() { posturaBase(); } }));
+      }
+    }
+    if (visita.pausa > 0) { visita.pausa -= dt; return; }
+    visita.x += visita.dir * vel * dt;
+    const fuera = visita.modo === 'suelo' ? visita.x < -10 * C || visita.x > W + 10 * C : visita.x < v.x - 12 || visita.x > v.x + v.w + 12;
+    if (fuera) { visita = null; proximaVisita = (20 + Math.random() * 20) * 60; }
+  }
+  function interrumpirLibre() {
+    if (paso && paso.libre) { cola = []; paso = null; }
+  }
+  // Dibujo de los visitantes (ojo: en la ventana se recortan al vidrio).
+  function dibujarVisitante(enVentana) {
+    if (!visita || (visita.modo === 'ventana') !== enVentana) return;
+    const v = ventanaRect();
+    const salto = visita.pausa > 0 ? Math.abs(Math.sin(visita.t * 8)) * 3 : Math.abs(Math.sin(visita.t * 10)) * 1.5;
+    const base = enVentana ? v.y + v.h + 4 : suelo;
+    const prev = S;
+    S = { ox: visita.x, oy: base - salto, sx: visita.dir, sy: 1 };
+    const t = visita.tipo;
+    if (t === 'panda') {
+      cel(-2.5, -5, 5, 4, COL.blanco); cel(-3, -6, 1.5, 1.5, COL.negro); cel(1.5, -6, 1.5, 1.5, COL.negro);
+      cel(-1.8, -4.3, 1.2, 1.1, COL.negro); cel(0.6, -4.3, 1.2, 1.1, COL.negro); cel(-1.4, -4, 0.5, 0.5, COL.blanco); cel(1, -4, 0.5, 0.5, COL.blanco);
+      cel(-0.4, -3, 0.8, 0.5, COL.negro);
+      cel(-2.5, -1.2, 5, 1.2, COL.negro); cel(-2.8, -2.6, 1, 1.6, COL.negro); cel(1.8, -2.6, 1, 1.6, COL.negro);
+      if (visita.pausa > 0) cel(2.6, -6.5, 1, 2.5, COL.negro); // saluda
+    } else if (t === 'ajolote') {
+      cel(-3, -2.4, 6, 2.2, '#F4A6B8'); cel(1.5, -3.6, 2.4, 2.2, '#F4A6B8');
+      cel(1.2, -4.4, 0.4, 1, '#E06A8B'); cel(3.4, -4.4, 0.4, 1, '#E06A8B'); cel(0.9, -3.6, 0.4, 0.8, '#E06A8B'); cel(3.7, -3.6, 0.4, 0.8, '#E06A8B');
+      cel(2.1, -3, 0.4, 0.4, COL.negro); cel(3, -3, 0.4, 0.4, COL.negro); cel(2.4, -2.2, 0.8, 0.2, '#C2185B');
+      cel(-4.4, -2, 1.6, 0.7, '#F4A6B8'); cel(-2.2, -0.4, 0.6, 0.6, '#E8899F'); cel(0.8, -0.4, 0.6, 0.6, '#E8899F');
+    } else {
+      cel(-2.5, -3, 4.5, 2.6, '#9C9C9C'); cel(1.5, -3.6, 2.2, 2, '#D8D8D8'); cel(3.6, -3, 0.8, 0.6, '#F4A6B8');
+      cel(1.8, -4.2, 0.6, 0.7, '#3A3A3A'); cel(2.8, -3.2, 0.4, 0.4, COL.negro);
+      cel(-4.5, -2.8, 2.2, 0.4, '#D9C2B5'); cel(-5.2, -3.4, 0.8, 0.8, '#D9C2B5'); // cola pelona
+      cel(-2, -0.5, 0.6, 0.5, '#5A5A5A'); cel(1, -0.5, 0.6, 0.5, '#5A5A5A');
+    }
+    S = prev;
+  }
+
+  // ---------- Ventana del laboratorio: cielo según la hora y el clima ----------
+  function ventanaRect() {
+    const w = Math.min(84, Math.max(56, W * 0.26)), h = 44;
+    return { x: Math.round(W - w - 18), y: est.temporada === 'muertos' ? 26 : 18, w: Math.round(w), h };
+  }
+  const CIELO = [ // [hora, arriba, abajo]
+    [0, '#0B1026', '#1B2A4A'], [5, '#0B1026', '#1B2A4A'], [6.3, '#2B3A67', '#F6A26B'], [8, '#6FB7E8', '#F6D7A7'],
+    [10, '#4FA3E0', '#A8D8F5'], [16.5, '#4FA3E0', '#A8D8F5'], [18, '#3A5BA0', '#F28C5B'], [19.3, '#1F2A55', '#8A4F7D'],
+    [20.5, '#0B1026', '#1B2A4A'], [24, '#0B1026', '#1B2A4A'],
+  ];
+  const hexARgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const mezclarColor = (a, b, p) => { const x = hexARgb(a), y = hexARgb(b); return 'rgb(' + x.map((v, i) => Math.round(v + (y[i] - v) * p)).join(',') + ')'; };
+  function colorCielo(h) {
+    for (let i = 0; i < CIELO.length - 1; i++) {
+      const [h0, a0, b0] = CIELO[i], [h1, a1, b1] = CIELO[i + 1];
+      if (h >= h0 && h <= h1) { const p = h1 === h0 ? 0 : (h - h0) / (h1 - h0); return [mezclarColor(a0, a1, p), mezclarColor(b0, b1, p)]; }
+    }
+    return [mezclarColor(CIELO[0][1], CIELO[0][1], 0), mezclarColor(CIELO[0][2], CIELO[0][2], 0)];
+  }
+  function dibujarVentana() {
+    const v = ventanaRect();
+    const ahora = ahoraLocal();
+    const h = ahora.getHours() + ahora.getMinutes() / 60;
+    const [arriba, abajo] = colorCielo(h);
+    const cl = est.clima;
+    const gris = cl && ['nublado', 'lluvia', 'tormenta', 'niebla', 'nieve'].includes(cl.tipo) ? (cl.tipo === 'nublado' ? 0.25 : 0.45) : 0;
+    const bandas = 6;
+    for (let i = 0; i < bandas; i++) {
+      const c = mezclarRgb(arriba, abajo, i / (bandas - 1));
+      rect(v.x, v.y + (v.h * i) / bandas, v.w, v.h / bandas + 1, c);
+      if (gris) rect(v.x, v.y + (v.h * i) / bandas, v.w, v.h / bandas + 1, '#8A8F98', gris);
+    }
+    const noche = h < 5.8 || h > 19.8;
+    if (noche) {
+      for (let i = 0; i < 9; i++) {
+        const sx = v.x + ((i * 37) % v.w), sy = v.y + 3 + ((i * 23) % (v.h - 14));
+        const brillo = 0.4 + 0.6 * Math.abs(Math.sin(k.t * 1.5 + i));
+        if (!gris) rect(sx, sy, 1.5, 1.5, '#FFFFFF', brillo);
+      }
+      const hl = (h >= 19.8 ? h - 19.8 : h + 4.2) / 10; // 0→1 a lo largo de la noche
+      const lx = v.x + v.w * (0.1 + 0.8 * hl), ly = v.y + v.h * (0.75 - 0.5 * Math.sin(Math.PI * hl));
+      rect(lx - 3, ly - 3, 6, 6, '#F2F2F2', gris ? 0.5 : 1); rect(lx - 1, ly - 3, 4, 5, mezclarRgb(arriba, abajo, 0.3), gris ? 0.5 : 1); // luna creciente
+    } else {
+      const hs = Math.min(1, Math.max(0, (h - 6) / 13.5));
+      const sx = v.x + v.w * (0.05 + 0.9 * hs), sy = v.y + v.h * (0.9 - 0.65 * Math.sin(Math.PI * hs));
+      const sol = h > 17 || h < 8 ? '#FF9F43' : '#FFD34D';
+      rect(sx - 4, sy - 4, 8, 8, sol, gris ? 0.4 : 1); rect(sx - 5, sy - 2, 10, 4, sol, gris ? 0.3 : 0.7); rect(sx - 2, sy - 5, 4, 10, sol, gris ? 0.3 : 0.7);
+    }
+    // nubes que pasan (más y más grises si está nublado)
+    const nubes = gris ? 4 : noche ? 1 : 2;
+    for (let i = 0; i < nubes; i++) {
+      const nx = v.x + ((k.t * (3 + i) + i * 47) % (v.w + 30)) - 15, ny = v.y + 6 + i * 9;
+      const c = gris ? '#B8BCC4' : '#FFFFFF';
+      rect(Math.max(v.x, nx), ny, Math.max(0, Math.min(14, v.x + v.w - Math.max(v.x, nx))), 4, c, noche ? 0.25 : 0.85);
+      rect(Math.max(v.x, nx + 3), ny - 2, Math.max(0, Math.min(7, v.x + v.w - Math.max(v.x, nx + 3))), 2, c, noche ? 0.25 : 0.85);
+    }
+    if (cl && (cl.tipo === 'lluvia' || cl.tipo === 'tormenta')) {
+      for (let i = 0; i < 14; i++) {
+        const gx = v.x + ((i * 13 + k.t * 20) % v.w), gy = v.y + ((i * 17 + k.t * 90) % v.h);
+        rect(gx, gy, 1, 4, '#BFD9F2', 0.8);
+      }
+      if (cl.tipo === 'tormenta' && (k.t % 7) < 0.12) rect(v.x, v.y, v.w, v.h, '#FFFFFF', 0.7);
+    }
+    if (cl && cl.tipo === 'nieve') for (let i = 0; i < 12; i++) rect(v.x + ((i * 11 + k.t * 6) % v.w), v.y + ((i * 19 + k.t * 15) % v.h), 2, 2, '#FFFFFF', 0.9);
+    if (cl && cl.tipo === 'niebla') rect(v.x, v.y + v.h * 0.4, v.w, v.h * 0.6, '#D8DCE2', 0.45);
+    recorte = v;
+    dibujarVisitante(true);
+    recorte = null;
+    // marco de madera, cruz y alféizar
+    const m = '#8B5A3C', ms = '#6B4430';
+    rect(v.x - 3, v.y - 3, v.w + 6, 3, m); rect(v.x - 3, v.y + v.h, v.w + 6, 3, m);
+    rect(v.x - 3, v.y, 3, v.h, m); rect(v.x + v.w, v.y, 3, v.h, m);
+    rect(v.x + v.w / 2 - 1, v.y, 2, v.h, m); rect(v.x, v.y + v.h / 2 - 1, v.w, 2, m);
+    rect(v.x - 6, v.y + v.h + 3, v.w + 12, 3, ms);
+    rect(v.x + 2, v.y + 2, 6, 2, '#FFFFFF', 0.25); // reflejo
+    dibujarTermometro(v);
+  }
+  function mezclarRgb(a, b, p) {
+    const x = a.match(/\d+/g).map(Number), y = b.match(/\d+/g).map(Number);
+    return 'rgb(' + x.map((v, i) => Math.round(v + (y[i] - v) * p)).join(',') + ')';
+  }
+  // Termómetro de pared con la temperatura del servidor (o la de afuera si el servidor no la da).
+  const DIGITOS = [
+    ['XXX', 'X.X', 'X.X', 'X.X', 'XXX'], ['.X.', 'XX.', '.X.', '.X.', 'XXX'], ['XXX', '..X', 'XXX', 'X..', 'XXX'], ['XXX', '..X', 'XXX', '..X', 'XXX'],
+    ['X.X', 'X.X', 'XXX', '..X', '..X'], ['XXX', 'X..', 'XXX', '..X', 'XXX'], ['XXX', 'X..', 'XXX', 'X.X', 'XXX'], ['XXX', '..X', '.X.', '.X.', '.X.'],
+    ['XXX', 'X.X', 'XXX', 'X.X', 'XXX'], ['XXX', 'X.X', 'XXX', '..X', 'XXX'],
+  ];
+  function dibujarTermometro(v) {
+    const servidor = est.sistema && est.sistema.temperatura;
+    const temp = servidor != null ? servidor : est.clima && est.clima.temp;
+    if (temp == null) return;
+    const x = v.x - 16, y = v.y + 2, alto = v.h - 6;
+    const min = servidor != null ? 20 : -5, max = servidor != null ? 95 : 40;
+    const frac = Math.max(0.05, Math.min(1, (temp - min) / (max - min)));
+    const color = servidor != null ? (temp >= 80 ? COL.rojo : temp >= 65 ? COL.ambar : COL.verde) : COL.rojo;
+    rect(x, y, 5, alto, '#E8ECEF'); rect(x + 1, y + 1, 3, alto - 2, '#C9CED4');
+    rect(x + 1, y + 1 + (alto - 2) * (1 - frac), 3, (alto - 2) * frac, color);
+    rect(x - 1, y + alto - 1, 7, 6, color);
+    String(Math.round(temp)).split('').forEach((c, i) => { const g = DIGITOS[Number(c)]; if (g) glifo(g, x - 2 + i * 4, y + alto + 7, 1, colorSuelo, 0.85); });
+  }
+
+  // Estante de matraces: uno lleno por cada pomodoro de hoy (máx. 8).
+  function dibujarEstante() {
+    const n = Math.min(8, (est.pomodoro && est.pomodoro.hoy) || 0);
+    if (!n) return;
+    const x = 8, y = est.temporada === 'muertos' ? 48 : 40;
+    rect(x - 2, y, 8 * 9 + 4, 2, COL.tallo); rect(x, y + 2, 2, 4, COL.tallo); rect(x + 8 * 9 - 2, y + 2, 2, 4, COL.tallo);
+    const colores = [COL.verde, COL.morado, COL.lente, COL.ambar, COL.corazon];
+    for (let i = 0; i < n; i++) {
+      const fx = x + 2 + i * 9;
+      rect(fx + 2, y - 8, 2, 3, COL.vidrio); rect(fx, y - 5, 6, 5, COL.vidrio); rect(fx + 1, y - 4, 4, 4, colores[i % colores.length]);
+    }
+  }
 
   // ---------- Hora del día ----------
   function ahoraLocal() { return est.horaPrueba ? new Date(est.horaPrueba) : new Date(); }
@@ -770,6 +1068,7 @@
     return s < 60 ? s + ' s' : Math.floor(s / 60) + ' min ' + (s % 60) + ' s';
   }
   function claudeListo(d) {
+    sonar('listo');
     cola.push(
       esperar(0.3, { ini() { posturaBase(); k.mirar = 0; k.ojos = 'felices'; k.texto = '📜 ¡Claude terminó! (' + duracionCorta(d.duracion) + ')'; } }),
       ...salto(14, 0.4, { ini() { ponerPose('estirado'); k.brazos = 'arriba-der'; k.sosteniendo = 'papel'; } }),
@@ -808,6 +1107,7 @@
     );
   }
   function comandoFallo(d) {
+    sonar('fallo');
     cola.push(
       esperar(0.5, {
         ini() {
@@ -847,6 +1147,7 @@
     return t.length > n ? t.slice(0, n - 1) + '…' : t;
   }
   function festejarCommit(d) {
+    sonar('commit');
     const texto = '¡Commit' + (d.repo ? ' en ' + d.repo : '') + '!' + (d.mensaje ? ' «' + recortar(d.mensaje, 30) + '»' : '') +
       (d.racha >= 2 ? ' · racha de ' + d.racha + ' días 🏅' : '');
     cola.push(esperar(0.01, { ini() { posturaBase(); k.mirar = 0; k.texto = texto; k.ojos = 'felices'; confeti(60); } }));
@@ -1152,6 +1453,12 @@
     medallas(-3.4, -3.4);
     if (est.temporada === 'patrias') monoTricolor(2, -3.8);
     if (k.sosteniendo === 'taza') taza(S.ox + 6.3 * C * S.sx, S.oy - 5.6 * C * S.sy);
+    if (k.sosteniendo === 'vaso') vaso(S.ox + 6.3 * C * S.sx, S.oy - 5.6 * C * S.sy, k.nivelVaso == null ? 1 : k.nivelVaso);
+    if (k.sosteniendo === 'torta') torta(S.ox, S.oy - 4.6 * C * S.sy, k.mordidas == null ? 3 : k.mordidas);
+    if (k.sosteniendo === 'trofeo') trofeo(S.ox + 5 * C * S.sx, S.oy - 10.6 * C * S.sy);
+    if (k.sosteniendo === 'paraguas') paraguasDibujo(S.ox + 5 * C * S.sx, S.oy - 10.4 * C * S.sy);
+    if (k.sosteniendo === 'abanico') abanico(S.ox + 6.3 * C * S.sx, S.oy - 6 * C * S.sy);
+    if (est.clima && est.clima.temp != null && est.clima.temp <= 10) bufanda();
     if (k.sosteniendo === 'escoba') escoba(S.ox + (5 + (k.escobaX || 0) * 1.5) * C * S.sx, S.oy);
     if (k.sosteniendo === 'extintor') extintor(S.ox + 5.6 * C * S.sx, S.oy - 3.4 * C * S.sy);
   }
@@ -1197,6 +1504,39 @@
   function monoTricolor(x, y) {
     cel(x, y, 0.5, 1.4, '#1E8E3E'); cel(x + 0.5, y, 0.5, 1.4, COL.blanco); cel(x + 1, y, 0.5, 1.4, '#CE1126');
     cel(x + 0.2, y + 1.4, 0.4, 0.8, '#1E8E3E'); cel(x + 0.9, y + 1.4, 0.4, 0.8, '#CE1126');
+  }
+  function vaso(cx, cy, nivel) {
+    const prev = S; S = { ox: cx, oy: cy, sx: 1, sy: 1 };
+    cel(-0.8, -2, 1.6, 2.2, COL.vidrio, 0.8); cel(-0.6, 0.1 - 1.9 * nivel, 1.2, 1.9 * nivel, '#5DADE2');
+    S = prev;
+  }
+  function torta(cx, cy, partes) {
+    const prev = S; S = { ox: cx, oy: cy, sx: 1, sy: 1 };
+    const w = 1.2 + partes * 1.1;
+    cel(-w / 2, -1.9, w, 0.7, '#D9A05B'); cel(-w / 2, -1.2, w, 0.35, '#5BC46A'); cel(-w / 2, -0.85, w, 0.35, '#E85A5A');
+    cel(-w / 2, -0.5, w, 0.6, '#D9A05B');
+    S = prev;
+  }
+  function trofeo(cx, cy) {
+    const prev = S; S = { ox: cx, oy: cy, sx: 1, sy: 1 };
+    cel(-1.2, -2, 2.4, 1.6, '#FFD34D'); cel(-1.8, -1.8, 0.6, 0.8, '#FFD34D'); cel(1.2, -1.8, 0.6, 0.8, '#FFD34D');
+    cel(-0.3, -0.4, 0.6, 0.6, '#E0A800'); cel(-0.9, 0.2, 1.8, 0.5, '#E0A800');
+    S = prev;
+  }
+  function paraguasDibujo(cx, cy) {
+    const prev = S; S = { ox: cx, oy: cy, sx: 1, sy: 1 };
+    cel(-3.5, -1, 7, 1, COL.rojo); cel(-2.5, -1.8, 5, 0.8, COL.rojo); cel(-1, -2.4, 2, 0.6, COL.rojo);
+    cel(-0.15, 0, 0.3, 3.4, COL.borde);
+    S = prev;
+  }
+  function abanico(cx, cy) {
+    const prev = S; S = { ox: cx, oy: cy, sx: 1, sy: 1 };
+    const a = Math.sin(k.t * 16) * 0.5;
+    cel(-1 + a, -2, 2, 1.6, '#F06292'); cel(-0.15, -0.4, 0.3, 1, COL.tallo);
+    S = prev;
+  }
+  function bufanda() {
+    cel(-3.6, -4.4, 7.2, 1, '#C62828'); cel(1.6, -3.4, 1.2, 1.6, '#C62828'); cel(1.6, -2, 1.2, 0.3, '#FFCDD2');
   }
   function taza(cx, cy) {
     const prev = S; S = { ox: cx, oy: cy, sx: 1, sy: 1 };
@@ -1607,8 +1947,11 @@
 
     const volteo = 1 - 0.5 * Math.sin(Math.PI * Math.min(1, k.tVolteo / 0.16));
     S = { ox: k.x + k.balanceo * C, oy: suelo - k.alt, sx: k.def.sx * volteo, sy: k.def.sy };
+    dibujarVentana();
+    dibujarEstante();
     decorarFecha(0);
     dibujarLampara();
+    dibujarVisitante(false);
     const laptopAtras = k.laptop && k.brazos === 'atras';
     if (laptopAtras) dibujarLaptop();
     if (k.pose === 'sentado') koalaSentado(); else koalaFrente();
@@ -1645,6 +1988,7 @@
     fisicaComida(dt);
     fisicaPelota(dt);
     moverParticulas(dt);
+    moverVisita(dt);
     decorarFecha(dt);
     if ((k.modo === 'dormido' || k.modo === 'siesta') && Math.random() < dt * 0.9) zeta();
     pintarTexto();
@@ -1688,6 +2032,10 @@
     const le = $('l-energia'), se = $('s-energia');
     if (le) le.title = est.energiaLigada ? 'Energía = lo que te queda de la sesión de 5 h de Claude Code' : 'Energía del koala (sin dato oficial de Claude Code)';
     if (se) se.textContent = est.energiaLigada ? '⚡ ligada a tu sesión de 5 h · se recarga ' + horaReinicio() : '';
+    const r = est.rutina;
+    const ba = $('b-agua'), na = $('n-agua');
+    if (r && ba) { ba.style.width = Math.min(100, (100 * r.agua) / r.metaAgua) + '%'; ba.style.background = 'var(--vscode-charts-blue, #3794ff)'; }
+    if (r && na) na.textContent = r.agua + '/' + r.metaAgua;
     const bd = $('btn-dormir');
     if (bd) bd.textContent = est.durmiendo ? 'Despertar' : 'Dormir';
   }
@@ -1798,6 +2146,8 @@
   const btnPomo = $('pomo-alternar'), btnPomoDet = $('pomo-detener');
   if (btnPomo) btnPomo.addEventListener('click', () => vscode.postMessage({ tipo: 'pomodoro', op: 'alternar' }));
   if (btnPomoDet) btnPomoDet.addEventListener('click', () => vscode.postMessage({ tipo: 'pomodoro', op: 'detener' }));
+  const btnAgua = $('btn-agua');
+  if (btnAgua) btnAgua.addEventListener('click', () => vscode.postMessage({ tipo: 'agua' }));
   const btnConf = $('btn-configurar');
   if (btnConf) btnConf.addEventListener('click', () => vscode.postMessage({ tipo: 'configurar' }));
 

@@ -7,14 +7,14 @@ const { crearEntorno, escribirPNG } = require('./simular');
 
 const base = (extra) => Object.assign({
   tipo: 'estado', necesidades: { saciedad: 80, animo: 80, energia: 80 }, durmiendo: false, trabajando: false,
-  uso: null, umbral: 90, temporada: 'ninguna', sinIconoComida: true,
+  uso: null, umbral: 90, temporada: 'ninguna', sinIconoComida: true, horaPrueba: (() => { const d = new Date(); d.setHours(17, 50, 0, 0); return d.getTime(); })(),
 }, extra);
 
 const cuadros = [];
 function toma(semilla, preparar) {
   const e = crearEntorno(semilla);
   preparar(e);
-  cuadros.push({ w: e.dw, h: e.dh, px: e.detalle() });
+  cuadros.push({ w: e.w, h: e.h, px: e.captura() });
 }
 toma(1, (e) => { e.enviar(base()); e.avanzar(0.2); e.enviar(base({ trabajando: true })); e.avanzar(4.2); });
 toma(2, (e) => { e.enviar(base({ pomodoro: { fase: 'enfoque', total: 1500000, restante: 900000, pausado: false, hoy: 2, enfoque: 25 } })); e.avanzar(5.5); });

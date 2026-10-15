@@ -46,6 +46,59 @@ async function disco(ruta) {
   }
 }
 
+// Temperatura del procesador (°C) en Linux; null si el sistema no la expone (Windows, macOS, VMs).
+function temperatura() {
+  let max = null;
+  const leer = (ruta) => {
+    try {
+      const v = Number(fs.readFileSync(ruta, 'utf8')) / 1000;
+      if (v > 0 && v < 130) max = max === null ? v : Math.max(max, v);
+    } catch (e) { /* sensor ilegible */ }
+  };
+  try {
+    for (const z of fs.readdirSync('/sys/class/thermal')) if (z.startsWith('thermal_zone')) leer(`/sys/class/thermal/${z}/temp`);
+  } catch (e) { /* no es Linux */ }
+  if (max === null) {
+    try {
+      for (const h of fs.readdirSync('/sys/class/hwmon')) leer(`/sys/class/hwmon/${h}/temp1_input`);
+    } catch (e) { /* sin hwmon */ }
+  }
+  return max === null ? null : Math.round(max);
+}
+
+// Clima real con Open-Meteo (gratis, sin cuenta). Solo si el usuario escribe su ciudad.
+let lugarClima = null; // { ciudad, lat, lon, nombre }
+function pedirJson(url) {
+  return new Promise((resolver) => {
+    const req = https.get(url, { timeout: 8000, headers: { 'User-Agent': 'koala-cientifico' } }, (res) => {
+      let t = '';
+      res.setEncoding('utf8');
+      res.on('data', (d) => { if (t.length < 100000) t += d; });
+      res.on('end', () => { try { resolver(res.statusCode === 200 ? JSON.parse(t) : null); } catch (e) { resolver(null); } });
+    });
+    req.on('timeout', () => { req.destroy(); resolver(null); });
+    req.on('error', () => resolver(null));
+  });
+}
+async function clima(ciudad) {
+  ciudad = String(ciudad || '').trim();
+  if (!ciudad) return null;
+  if (!lugarClima || lugarClima.ciudad !== ciudad) {
+    const g = await pedirJson(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=es&name=${encodeURIComponent(ciudad)}`);
+    const r = g && g.results && g.results[0];
+    if (!r) return { error: `No encontré "${ciudad}"` };
+    lugarClima = { ciudad, lat: r.latitude, lon: r.longitude, nombre: r.name };
+  }
+  const d = await pedirJson(`https://api.open-meteo.com/v1/forecast?latitude=${lugarClima.lat}&longitude=${lugarClima.lon}` +
+    '&current=temperature_2m,weather_code,is_day,precipitation&timezone=auto');
+  if (!d || !d.current) return { error: 'Sin respuesta del servicio del clima', nombre: lugarClima.nombre };
+  const c = d.current.weather_code;
+  // Códigos WMO: 0 despejado, 1–3 nubes, 45–48 niebla, 51–67 y 80–82 lluvia, 71–77 y 85–86 nieve, 95–99 tormenta.
+  const tipo = c >= 95 ? 'tormenta' : (c >= 71 && c <= 77) || c === 85 || c === 86 ? 'nieve'
+    : (c >= 51 && c <= 67) || (c >= 80 && c <= 82) ? 'lluvia' : c >= 45 && c <= 48 ? 'niebla' : c >= 2 ? 'nublado' : 'despejado';
+  return { nombre: lugarClima.nombre, temp: Math.round(d.current.temperature_2m), tipo, codigo: c, ts: Date.now() };
+}
+
 async function leerSistema() {
   const discos = [];
   const vistos = new Set();
@@ -65,6 +118,7 @@ async function leerSistema() {
     memoria: memoria(),
     discos,
     encendido: os.uptime(),
+    temperatura: temperatura(),
   };
 }
 
@@ -209,4 +263,4 @@ function diagnosticos() {
   return { errores, avisos, archivos };
 }
 
-module.exports = { leerSistema, revisarServicios, resumenGit, diagnosticos, apiGit, vigilarGit, racha };
+module.exports = { clima, leerSistema, revisarServicios, resumenGit, diagnosticos, apiGit, vigilarGit, racha };

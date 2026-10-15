@@ -2,7 +2,7 @@
   "name": "koala-cientifico",
   "displayName": "Koala científico",
   "description": "Mascota koala de laboratorio que trabaja contigo y mide tu uso de Claude Code: límites de sesión y semana, ritmo, costo equivalente, pomodoro, git y servidor.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "jjas-029",
   "license": "MIT",
   "icon": "media/icono.png",
@@ -102,6 +102,10 @@
       {
         "command": "koalaCientifico.consultarAnthropic",
         "title": "Koala científico: consultar uso real en Anthropic"
+      },
+      {
+        "command": "koalaCientifico.agua",
+        "title": "Koala científico: tomé un vaso de agua"
       }
     ],
     "configuration": {
@@ -246,6 +250,34 @@
           "default": "",
           "pattern": "^$|^\\d{1,2}[/-]\\d{1,2}$",
           "description": "Tu cumpleaños como DD/MM (p. ej. 29/03): ese día el koala tiene pastel y gorro de fiesta."
+        },
+        "koalaCientifico.clima.ciudad": {
+          "type": "string",
+          "default": "",
+          "description": "Tu ciudad para el clima real en la ventana del laboratorio (Open-Meteo, gratis y sin cuenta; necesita internet). Vacío = sin clima, solo el cielo según la hora."
+        },
+        "koalaCientifico.metaAgua": {
+          "type": "number",
+          "default": 8,
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Vasos de agua al día (botón 💧 en la pestaña Mascota)."
+        },
+        "koalaCientifico.minutosPausaActiva": {
+          "type": "number",
+          "default": 90,
+          "minimum": 0,
+          "description": "Minutos seguidos de actividad para que el koala te invite a estirarte. 0 = nunca."
+        },
+        "koalaCientifico.visitantes": {
+          "type": "boolean",
+          "default": true,
+          "description": "De vez en cuando pasa un panda, un ajolote o un tlacuache a saludar."
+        },
+        "koalaCientifico.sonidos": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sonidos cortos al terminar Claude o un pomodoro, al festejar un commit y al desbloquear un logro."
         },
         "koalaCientifico.servicios": {
           "type": "array",

@@ -1,5 +1,19 @@
 # Registro de cambios
 
+## 1.1.0
+- **Ventana del laboratorio** con el cielo según la hora (amanecer, día, atardecer, noche con luna y
+  estrellas) y el **clima real** de tu ciudad (Open-Meteo, opcional): nubes, lluvia, tormenta, nieve, niebla.
+- **Termómetro** con la temperatura del CPU del servidor (alerta a 85 °C).
+- **Rutina del día**: buenos días con café y resumen, hora de la comida (torta), pausas activas tras
+  90 min seguidos y despedida con el resumen del día.
+- **Agua**: botón 💧 y meta diaria.
+- **Estante** con un matraz por cada pomodoro del día.
+- **Logros** (14) en una vitrina de la pestaña Hoy; viajan con Settings Sync.
+- **Ánimo del código**: contento con días sin errores, nervioso con muchos cambios sin commit.
+- **Clima en el koala**: paraguas con lluvia, abanico con calor, bufanda con frío.
+- **Visitantes**: un panda, un ajolote o un tlacuache pasan por el piso o por la ventana a saludar.
+- **Sonidos** opcionales (desactivados por omisión).
+
 ## 1.0.0 — primera versión pública
 - Lista para la tienda: icono, licencia MIT, capturas y aviso de privacidad.
 

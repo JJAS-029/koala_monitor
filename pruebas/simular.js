@@ -535,6 +535,83 @@ escena('27-tamales-y-rosca', 52, (e, tomar) => {
   verificar(rosca, 'en Reyes come rosca');
 });
 
+const aLas = (h, m = 0) => { const d = new Date(); d.setHours(h, m, 0, 0); return d.getTime(); };
+
+escena('28-ventana-y-cielo', 61, (e, tomar) => {
+  const casos = [
+    [6, 40, null], [12, 0, { temp: 24, tipo: 'despejado' }], [18, 20, null], [22, 30, null],
+    [13, 0, { temp: 14, tipo: 'lluvia', nombre: 'Toluca' }], [16, 0, { temp: -1, tipo: 'nieve' }],
+  ];
+  for (const [h, m, clima] of casos) {
+    e.enviar(estado({ horaPrueba: aLas(h, m), clima, sistema: { temperatura: 55, memoria: { pct: 30 }, discos: [] } }));
+    e.avanzar(0.8); tomar();
+  }
+  e.enviar(estado({ horaPrueba: aLas(12), sistema: { temperatura: 88, memoria: { pct: 30 }, discos: [] } }));
+  e.avanzar(1); tomar();
+  verificar(/servidor está a 88/.test(e.elementos['estado'].textContent), 'avisa si el servidor se calienta');
+});
+
+escena('29-rutina-del-dia', 62, (e, tomar) => {
+  e.enviar(estado({ horaPrueba: aLas(8, 30), rutina: { agua: 2, metaAgua: 8, diasSinErrores: 0, logros: [] } }));
+  e.enviar({ tipo: 'accion', accion: 'buenosDias', datos: { semana: 34, racha: 5, cambios: 3 } });
+  const textos = new Set();
+  for (let i = 0; i < 20; i++) { e.avanzar(0.6); textos.add(e.elementos['estado'].textContent); if (i % 3 === 0) tomar(); }
+  verificar([...textos].some((t) => /Buenos días/.test(t)) && [...textos].some((t) => /34 % de tu semana/.test(t)), 'buenos días con resumen');
+  verificar([...textos].some((t) => /Café/.test(t)), 'empieza con un cafecito');
+  for (const [accion, datos, patron] of [
+    ['lonche', {}, /comida/], ['pausaActiva', { minutos: 95 }, /1 h 35 min seguidos/], ['tomarAgua', { vasos: 3, meta: 8 }, /Vaso 3 de 8/],
+    ['logro', { nombre: 'Primer experimento', icono: '🧪' }, /Logro: Primer experimento/], ['despedida', { commitsHoy: 4, pomodoros: 3, activo: 20000 }, /Buen trabajo hoy! 4 commits, 3 pomodoros/],
+  ]) {
+    e.enviar({ tipo: 'accion', accion, datos });
+    let visto = false;
+    for (let i = 0; i < 16 && !visto; i++) { e.avanzar(0.4); visto = patron.test(e.elementos['estado'].textContent); }
+    e.avanzar(0.6); tomar();
+    verificar(visto, accion);
+  }
+  verificar(e.elementos['n-agua'].textContent === '2/8', 'barra de agua en la pestaña Mascota');
+});
+
+escena('30-visitantes', 63, (e, tomar) => {
+  const vistos = new Set();
+  const cuadrosVisita = [];
+  for (const semilla of [1, 2, 3, 4, 5, 6]) {
+    const e2 = crearEntorno(semilla * 101);
+    e2.enviar(estado({ visitantes: true, horaPrueba: aLas(11) }));
+    e2.avanzar(0.5);
+    e2.enviar({ tipo: 'accion', accion: 'visitaPrueba' });
+    let saludo = false;
+    for (let i = 0; i < 40; i++) {
+      e2.avanzar(0.5);
+      saludo = saludo || /¡Hola, (panda|ajolote|tlacuache)!/.test(e2.elementos['estado'].textContent);
+      if (e2.koala.k.texto && /¡Hola/.test(e2.koala.k.texto) && cuadrosVisita.length < semilla) cuadrosVisita.push(e2.captura());
+    }
+    if (e2.mensajes.some((m) => m.tipo === 'visita')) vistos.add(semilla);
+    console.log('    visita ' + semilla + (saludo ? ': el koala saludó' : ': pasó sin cruzarse'));
+  }
+  verificar(vistos.size === 6, 'cada visita se cuenta para el logro (' + vistos.size + '/6)');
+  hoja('30-visitantes-saludo', cuadrosVisita, e.w, e.h);
+  tomar();
+});
+
+escena('31-animo-y-clima', 64, (e, tomar) => {
+  e.enviar(estado({ git: [{ cambios: 25, commitsHoy: 0 }], horaPrueba: aLas(12) }));
+  let nerv = false;
+  for (let i = 0; i < 10 && !nerv; i++) { e.avanzar(0.5); nerv = /Muchos cambios sin commit \(25\)/.test(e.elementos['estado'].textContent); }
+  verificar(nerv, 'se pone nervioso con muchos cambios sin commit');
+  e.enviar(estado({ clima: { temp: 5, tipo: 'nublado' }, pomodoro: { hoy: 5 }, horaPrueba: aLas(12) }));
+  e.avanzar(1); tomar();
+  e.enviar(estado({ git: [], clima: { temp: 34, tipo: 'despejado' }, horaPrueba: aLas(15) }));
+  let calor = false;
+  for (let i = 0; i < 120 && !calor; i++) { e.avanzar(0.5); calor = e.koala.k.sosteniendo === 'abanico'; }
+  tomar();
+  verificar(calor, 'con calor se abanica');
+  e.enviar(estado({ clima: { temp: 15, tipo: 'lluvia' }, horaPrueba: aLas(15) }));
+  let paraguas = false;
+  for (let i = 0; i < 120 && !paraguas; i++) { e.avanzar(0.5); paraguas = e.koala.k.sosteniendo === 'paraguas'; }
+  tomar();
+  verificar(paraguas, 'con lluvia saca el paraguas');
+});
+
 if (errores.length) {
   console.log(`\n${errores.length} verificación(es) fallaron`);
   process.exit(1);

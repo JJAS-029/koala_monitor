@@ -9,6 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 const monitor = require('./monitor');
 const costos = require('./costos');
+const { crearRutina } = require('./rutina');
 const https = require('https');
 const { execFile, execFileSync } = require('child_process');
 
@@ -62,6 +63,9 @@ let sistema = null;
 let servicios = [];
 let gitInfo = null;
 let diag = { errores: 0, avisos: 0, archivos: 0 };
+let climaActual = null;
+let rutina = null;
+let ventanaPrevia = null; // { reinicio, pct } de la sesión de 5 h, para detectar cuándo cierra
 
 // ---------- Pomodoro ----------
 const CLAVE_POMODORO = 'koala.pomodoro';
@@ -520,6 +524,10 @@ function actualizarConsumo() {
   calcularUsoLocal();
   sincronizarEnergia();
   const u = resumenUso();
+  if (u.cinco && !u.cinco.reiniciada && u.cinco.reinicio) {
+    if (ventanaPrevia && ventanaPrevia.reinicio !== u.cinco.reinicio && rutina) rutina.alCerrarVentana(ventanaPrevia.pct);
+    ventanaPrevia = { reinicio: u.cinco.reinicio, pct: u.cinco.pct };
+  }
   avisarSiHaceFalta(u);
   pintarBarra(u);
   enviarEstado();
@@ -682,6 +690,7 @@ function calcularAlertas(u) {
   if (max >= umbral) a.push({ nivel: 3, texto: `¡Casi al límite de Claude Code (${Math.round(max)} %)!` });
   for (const s of servicios) if (!s.ok) a.push({ nivel: 3, texto: `${s.nombre} no responde (${s.detalle})` });
   if (sistema) {
+    if (sistema.temperatura >= 85) a.push({ nivel: 3, texto: `El servidor está a ${sistema.temperatura} °C` });
     if (sistema.memoria.pct >= 90) a.push({ nivel: 3, texto: `Memoria del servidor al ${Math.round(sistema.memoria.pct)} %` });
     for (const d of sistema.discos) if (d.pct >= 90) a.push({ nivel: 3, texto: `Disco ${d.ruta} al ${Math.round(d.pct)} %` });
   }
@@ -738,9 +747,11 @@ let ultimaBarrida = 0;
 function medirDiag() {
   const antes = diag.errores;
   diag = monitor.diagnosticos();
+  if (diag.errores > 0 && rutina) rutina.alError();
   // Barre solo si arreglaste algo hace poco (cerrar un archivo también "borra" sus errores).
   if (antes > 0 && diag.errores === 0 && Date.now() - ultimaActividad < 120000 && Date.now() - ultimaBarrida > 300000) {
     ultimaBarrida = Date.now();
+    if (rutina) rutina.alBarrer();
     animar('errores0', { antes });
   }
 }
@@ -788,6 +799,10 @@ function enviarEstado() {
     inactivoMin: minutosInactivo(),
     minutosSiesta: config().get('minutosParaSiesta', 20),
     temporada: temporada(),
+    clima: climaActual,
+    rutina: rutina ? rutina.estado() : null,
+    sonidos: config().get('sonidos', false),
+    visitantes: config().get('visitantes', true),
   });
 }
 
@@ -828,11 +843,35 @@ function aplicarEfecto(accion) {
 }
 
 function alEventoGit(ev) {
+  if (rutina) (ev.tipo === 'commit' ? rutina.alCommit() : rutina.alPush());
   necesidades.animo = limitar(necesidades.animo + (ev.tipo === 'commit' ? 8 : 5));
   guardarEstado();
   medirGit().then(() => {
     animar(ev.tipo === 'commit' ? 'festejarCommit' : 'festejarPush', { ...ev, racha: monitor.racha(gitInfo).dias });
     enviarEstado();
+  });
+}
+
+async function medirClima() {
+  const ciudad = config().get('clima.ciudad', '');
+  climaActual = ciudad ? await monitor.clima(ciudad) : null;
+}
+
+function revisarRutina() {
+  if (!rutina) return;
+  const u = resumenUso();
+  rutina.revisar({
+    inactivoMin: minutosInactivo(),
+    visible: !!(vista && vista.visible),
+    racha: monitor.racha(gitInfo).dias,
+    resumen: {
+      semana: u.semana && !u.semana.reiniciada ? Math.round(u.semana.pct) : null,
+      racha: monitor.racha(gitInfo).dias,
+      cambios: (gitInfo || []).reduce((n, g) => n + g.cambios, 0),
+      commitsHoy: (gitInfo || []).reduce((n, g) => n + g.commitsHoy, 0),
+      pomodoros: pomodoro.hoy || 0,
+      activo: datosActivo(),
+    },
   });
 }
 
@@ -860,6 +899,8 @@ class ProveedorVista {
       else if (msg.tipo === 'configurar') configurarMonitor();
       else if (msg.tipo === 'agregarServicio') agregarServicio();
       else if (msg.tipo === 'activarApi') activarApi();
+      else if (msg.tipo === 'agua') { if (rutina) rutina.agua(); enviarEstado(); }
+      else if (msg.tipo === 'visita') { if (rutina) rutina.alVisita(); }
       else if (msg.tipo === 'consultarApi') consultarAnthropic(true);
       else if (msg.tipo === 'quitarServicio') quitarServicio(msg.url);
       else if (msg.tipo === 'comando') vscode.commands.executeCommand(msg.id);
@@ -916,6 +957,11 @@ function htmlVista(webview) {
                   opacity: .25; }
   .sub { opacity: .7; font-size: 11px; margin-top: 2px; }
   #uso-nota { opacity: .7; font-size: 11px; margin-top: 4px; }
+  .boton-agua { width: 100%; font: inherit; margin: -4px 0 10px; padding: 4px 0; border: none; border-radius: 3px; cursor: pointer;
+                color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
+  .logros { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
+  .logro { text-align: center; font-size: 20px; padding: 4px 0; border-radius: 4px; background: var(--vscode-editorWidget-background, #8881); }
+  .logro.bloqueado { filter: grayscale(1); opacity: .3; }
   .pomo { border-top: 1px solid var(--vscode-editorWidget-border, #8884); padding: 6px 0 8px; }
   .pomo .barra > i { width: 0; background: var(--vscode-charts-red, #e0524d); transition: width 1s linear; }
   .pomo .barra > i.descanso { background: var(--vscode-charts-green, #5bc46a); }
@@ -989,12 +1035,14 @@ function htmlVista(webview) {
   <div class="fila"><span>Ánimo</span><div class="barra"><i id="b-animo"></i></div><span class="num" id="n-animo"></span></div>
   <div class="fila"><span id="l-energia">Energía</span><div class="barra"><i id="b-energia"></i></div><span class="num" id="n-energia"></span></div>
   <div class="sub" id="s-energia"></div>
+  <div class="fila"><span>Agua</span><div class="barra"><i id="b-agua"></i></div><span class="num" id="n-agua"></span></div>
   <div class="botones">
     <button data-accion="comer">Comer</button>
     <button data-accion="jugar">Jugar</button>
     <button data-accion="mimar">Mimar</button>
     <button data-accion="dormir" id="btn-dormir">Dormir</button>
   </div>
+  <button class="boton-agua" id="btn-agua" title="Suma un vaso a tu meta del día">💧 Tomé un vaso de agua</button>
   <div class="pomo">
     <div class="probeta">
       <div class="tit"><span id="pomo-fase">Pomodoro</span><b id="pomo-reloj">25:00</b></div>
@@ -1093,6 +1141,7 @@ function revisarPomodoro() {
       if (pomodoro.fecha !== hoyTexto()) { pomodoro.hoy = 0; pomodoro.fecha = hoyTexto(); }
       pomodoro.hoy++;
       pomodoro.ciclo++;
+      if (rutina) rutina.alPomodoro(pomodoro.hoy);
       const largo = pomodoro.ciclo % Math.max(1, config().get('pomodoro.antesDeDescansoLargo', 4)) === 0;
       necesidades.animo = limitar(necesidades.animo + 10);
       iniciarFase(largo ? 'descansoLargo' : 'descanso');
@@ -1230,7 +1279,7 @@ async function configurarMonitor(yaConfirmado) {
 // ---------- Activación ----------
 function activate(ctx) {
   contexto = ctx;
-  ctx.globalState.setKeysForSync([CLAVE_ESTADO]); // ánimo, saciedad y energía viajan con Settings Sync
+  ctx.globalState.setKeysForSync([CLAVE_ESTADO, 'koala.logros', 'koala.contadores']); // ánimo, saciedad y energía viajan con Settings Sync
   cargarEstado();
 
   ctx.subscriptions.push(vscode.window.registerWebviewViewProvider('koalaCientifico.panel', new ProveedorVista(), {
@@ -1276,6 +1325,7 @@ function activate(ctx) {
 
   ctx.subscriptions.push(vscode.workspace.onDidChangeConfiguration((e) => {
     if (e.affectsConfiguration('koalaCientifico.servicios')) medirServicios();
+    else if (e.affectsConfiguration('koalaCientifico.clima')) medirClima().then(enviarEstado);
     else if (e.affectsConfiguration('koalaCientifico.usoDesdeAnthropic')) consultarAnthropic(true);
     else if (e.affectsConfiguration('koalaCientifico')) actualizarConsumo();
   }));
@@ -1313,6 +1363,17 @@ function activate(ctx) {
   }));
   setTimeout(medirTodo, 3000);
   setTimeout(ofrecerConfiguracion, 8000);
+  rutina = crearRutina({
+    contexto: ctx,
+    animar,
+    notificar: (t) => vscode.window.showInformationMessage(t),
+    config,
+  });
+  medirClima().then(enviarEstado);
+  const relojRutina = setInterval(revisarRutina, 15000);
+  const relojClima = setInterval(() => medirClima().then(enviarEstado), 15 * 60000);
+  ctx.subscriptions.push({ dispose() { clearInterval(relojRutina); clearInterval(relojClima); } });
+  comando('koalaCientifico.agua', () => { rutina.agua(); enviarEstado(); });
   // Commits y pushes: el koala festeja (y se alegra: más ánimo).
   monitor.vigilarGit(alEventoGit).then((d) => ctx.subscriptions.push(d), () => {});
   const relojUso = setInterval(escanearTranscripciones, 60 * 1000);

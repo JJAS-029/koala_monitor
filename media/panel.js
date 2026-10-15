@@ -274,6 +274,18 @@
     });
     calor += '</div>';
     html += tarjeta('Uso de Claude por hora (7 días)', calor);
+
+    // vitrina de logros
+    const ru = est.rutina;
+    if (ru) {
+      const hechos = ru.logros.filter((l) => l.fecha).length;
+      html += tarjeta('Logros (' + hechos + ' de ' + ru.logros.length + ')', '<div class="logros">' +
+        ru.logros.map((l) => '<div class="logro' + (l.fecha ? '' : ' bloqueado') + '" title="' +
+          esc(l.nombre + ': ' + l.desc + (l.fecha ? ' · ' + new Date(l.fecha).toLocaleDateString('es-MX') : ' (pendiente)')) + '">' +
+          (l.fecha ? l.icono : '❔') + '</div>').join('') + '</div>' +
+        '<div class="nota">💧 Agua hoy: ' + ru.agua + ' de ' + ru.metaAgua + ' vasos' +
+        (ru.diasSinErrores >= 1 ? ' · ' + ru.diasSinErrores + ' día' + (ru.diasSinErrores === 1 ? '' : 's') + ' sin errores' : '') + '</div>');
+    }
     pintar('hoy', html);
   }
 
@@ -288,8 +300,15 @@
         renglon('CPU (' + s.nucleos + ' núcleos)', pct(cpu), cpu || 0, nivel(cpu || 0, 70, 90), 'Carga 1 min: ' + s.carga.toFixed(2)) +
         renglon('Memoria', bytes(s.memoria.usada) + ' / ' + bytes(s.memoria.total), s.memoria.pct, nivel(s.memoria.pct, 75, 90)) +
         s.discos.map((d) => renglon('Disco ' + d.ruta, bytes(d.usada) + ' / ' + bytes(d.total), d.pct, nivel(d.pct, 80, 90))).join('') +
+        (s.temperatura != null ? renglon('Temperatura CPU', s.temperatura + ' °C', Math.min(100, (s.temperatura / 100) * 100), nivel(s.temperatura, 70, 85)) : '') +
         '<div class="nota">Encendido hace ' + (s.encendido >= 172800 ? Math.floor(s.encendido / 86400) + ' días' : duracion(s.encendido)) + '</div>');
     }
+    const cl = est.clima;
+    html += tarjeta('Clima', cl && !cl.error
+      ? '<div class="cifras">' + cifra(cl.temp + ' °C', esc(cl.nombre || '')) + cifra(({ despejado: '☀️', nublado: '⛅', niebla: '🌫️', lluvia: '🌧️', tormenta: '⛈️', nieve: '❄️' })[cl.tipo] || '·', cl.tipo) + '</div>' +
+        '<div class="nota">Open-Meteo · se ve en la ventana del laboratorio</div>'
+      : '<div class="nota">' + (cl && cl.error ? '⚠ ' + esc(cl.error) + '. ' : '') +
+        'Escribe tu ciudad en <code>koalaCientifico.clima.ciudad</code> para ver el clima real en la ventana (necesita internet).</div>');
     const lista = est.servicios || [];
     const filas = lista.map((x) => '<div class="servicio" title="' + esc(x.url) + '"><span class="luz' + (x.ok ? '' : ' mal') + '"></span>' +
       '<span class="nom">' + esc(x.nombre) + '</span><span class="val">' + esc(x.ok ? (x.ms + ' ms') : x.detalle) + '</span>' +

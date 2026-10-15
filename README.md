@@ -23,6 +23,8 @@ La mascota, el pomodoro y las pestañas Hoy y Sistema funcionan sin configurar n
 
 ## Privacidad
 Todo se queda en tu computadora salvo lo que actives tú:
+- **Clima (desactivado por omisión)**: si escribes tu ciudad, se consulta Open-Meteo con ese nombre y
+  sus coordenadas, cada 15 min.
 - Lee tus transcripciones de Claude Code (`~/.claude/projects`) **solo para contar tokens**,
   modelos, herramientas y horas; no lee ni envía el contenido de las conversaciones.
 - *Configurar monitor* agrega a `~/.claude/settings.json` una status line y hooks (con respaldo
@@ -114,6 +116,26 @@ baila con el mensaje del commit; con cada **push** lanza un cohete. Cada uno sub
   laptop; al volver despierta sobresaltado.
 - **Arrastrar**: carga al koala con el mouse y suéltalo (cae aplastado); arrastra la rama de la
   esquina para darle de comer donde la sueltes. Un clic sin arrastrar lo mima.
+
+## El laboratorio a lo largo del día
+- **Ventana**: el cielo cambia con la hora (amanecer, día, atardecer, noche con luna y estrellas). Con
+  `koalaCientifico.clima.ciudad` (p. ej. `Toluca`) muestra el clima real: nubes, lluvia, tormenta, nieve o
+  niebla (Open-Meteo, gratis y sin cuenta; necesita internet). El koala saca paraguas, se abanica o se
+  pone bufanda según el clima.
+- **Termómetro** junto a la ventana con la temperatura del CPU del servidor (si el sistema la expone;
+  si no, la de afuera).
+- **Rutina**: buenos días con café y un resumen (semana de Claude, racha, cambios pendientes); hora de
+  la comida; **pausa activa** tras `koalaCientifico.minutosPausaActiva` (90) min seguidos; despedida al
+  final del día con lo que hiciste.
+- **Agua**: botón 💧 en la pestaña Mascota y meta diaria (`koalaCientifico.metaAgua`).
+- **Estante** con un matraz por cada pomodoro del día.
+- **Logros**: 14 medallas en la pestaña Hoy (primer pomodoro, rachas, 100 commits, madrugador,
+  noctámbulo, código impecable…).
+- **Ánimo del código**: sonríe solo tras días sin errores; se pone nervioso con 20 o más cambios sin commit.
+- **Visitantes** (`koalaCientifico.visitantes`): de vez en cuando un panda, un ajolote o un tlacuache
+  pasan por el piso o por la ventana y se saludan.
+- **Sonidos** (`koalaCientifico.sonidos`, apagados por omisión): al terminar Claude o un pomodoro, al
+  festejar un commit, al desbloquear un logro.
 
 ## Temporadas y fechas
 | Fecha | El koala… |
