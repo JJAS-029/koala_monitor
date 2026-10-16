@@ -1,0 +1,201 @@
+'use strict';
+// HTML y CSS del panel del koala (webview). Todo con nonce: la CSP no permite estilos ni scripts en línea.
+const vscode = require('vscode');
+const crypto = require('crypto');
+
+function htmlVista(webview, extensionUri) {
+  const nonce = crypto.randomBytes(16).toString('base64');
+  const script = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'koala.js'));
+  const scriptPanel = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'panel.js'));
+  const csp = [
+    "default-src 'none'",
+    `img-src ${webview.cspSource} data:`,
+    `style-src 'nonce-${nonce}'`,
+    `script-src 'nonce-${nonce}'`,
+  ].join('; ');
+  return `<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="${csp}">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Koala científico</title>
+<style nonce="${nonce}">
+  body { margin: 0; padding: 6px 10px 12px; font-family: var(--vscode-font-family); font-size: 12px;
+         color: var(--vscode-foreground); }
+  #lienzo { width: 100%; height: 150px; display: block; cursor: pointer; image-rendering: pixelated; }
+  #estado { text-align: center; margin: 4px 0 8px; min-height: 16px; opacity: .9; }
+  .fila { display: grid; grid-template-columns: 64px 1fr 30px; align-items: center; gap: 6px; margin: 3px 0; }
+  .barra { height: 8px; background: var(--vscode-editorWidget-border, #8884); border-radius: 4px; overflow: hidden; }
+  .barra > i { display: block; height: 100%; width: 50%; background: var(--vscode-charts-green, #4caf50);
+               transition: width .4s ease, background-color .4s ease; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; opacity: .8; }
+  .botones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 8px 0 10px; }
+  .botones button { font: inherit; padding: 4px 0; border: none; border-radius: 3px; cursor: pointer;
+                    color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
+  .botones button:hover { background: var(--vscode-button-secondaryHoverBackground); }
+  .lab { border-top: 1px solid var(--vscode-editorWidget-border, #8884); padding-top: 8px; }
+  .lab h3 { font-size: 11px; font-weight: 600; margin: 0 0 6px; opacity: .85; }
+  .probeta { margin: 6px 0 8px; }
+  .probeta .tit { display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .probeta .tit b { font-variant-numeric: tabular-nums; }
+  .tubo { position: relative; height: 14px; border: 1px solid var(--vscode-foreground); border-radius: 0 7px 7px 0;
+          opacity: .95; overflow: hidden; }
+  .tubo > i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; transition: width .6s ease;
+              background: var(--vscode-charts-green, #4caf50); }
+  .tubo > i::after { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 3px; background: #fff6; }
+  .tubo .marcas { position: absolute; inset: 0;
+                  background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), var(--vscode-foreground) calc(10% - 1px) 10%);
+                  opacity: .25; }
+  .sub { opacity: .7; font-size: 11px; margin-top: 2px; }
+  #uso-nota { opacity: .7; font-size: 11px; margin-top: 4px; }
+  .boton-agua { width: 100%; font: inherit; margin: -4px 0 10px; padding: 4px 0; border: none; border-radius: 3px; cursor: pointer;
+                color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
+  .logros { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
+  .logro { text-align: center; font-size: 20px; padding: 4px 0; border-radius: 4px; background: var(--vscode-editorWidget-background, #8881); }
+  .logro.bloqueado { filter: grayscale(1); opacity: .3; }
+  .alarmas-caja { border-top: 1px solid var(--vscode-editorWidget-border, #8884); padding: 6px 0 8px; }
+  .tit-alarmas { font-size: 11px; font-weight: 600; opacity: .85; margin-bottom: 4px; }
+  .alarma { display: grid; grid-template-columns: 18px 44px 1fr auto 16px; gap: 6px; align-items: center; font-size: 11px; margin: 3px 0; }
+  .alarma.apagada { opacity: .45; }
+  .alarma .hora { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .alarma .msg { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .alarma .rep { opacity: .65; }
+  .alarma button { border: none; background: none; color: var(--vscode-foreground); cursor: pointer; padding: 0; font: inherit; }
+  .alarma-form { display: grid; grid-template-columns: 76px 1fr 84px 24px; gap: 4px; margin-top: 4px; }
+  .alarma-form input, .alarma-form select { font: inherit; font-size: 11px; min-width: 0; padding: 2px 4px;
+    color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, #8884); border-radius: 2px; }
+  .alarma-form button { font: inherit; border: none; border-radius: 3px; cursor: pointer;
+    color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+  .pomo { border-top: 1px solid var(--vscode-editorWidget-border, #8884); padding: 6px 0 8px; }
+  .pomo .barra > i { width: 0; background: var(--vscode-charts-red, #e0524d); transition: width 1s linear; }
+  .pomo .barra > i.descanso { background: var(--vscode-charts-green, #5bc46a); }
+  .pomo-botones { display: grid; grid-template-columns: 2fr 1fr; gap: 4px; }
+  .pomo-botones button { font: inherit; padding: 4px 0; border: none; border-radius: 3px; cursor: pointer;
+                         color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+  .pomo-botones button:hover { background: var(--vscode-button-hoverBackground); }
+  .pomo-botones #pomo-detener { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
+  .pestanas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin: 0 0 8px;
+              border-bottom: 1px solid var(--vscode-editorWidget-border, #8884); }
+  .pestanas button { font: inherit; font-size: 11px; padding: 4px 0 5px; border: none; background: none; cursor: pointer;
+                     color: var(--vscode-foreground); opacity: .65; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .pestanas button.sel { opacity: 1; border-bottom-color: var(--vscode-focusBorder, #3794ff); font-weight: 600; }
+  .pestanas button .punto { display: inline-block; width: 6px; height: 6px; border-radius: 3px; margin-left: 4px;
+                            vertical-align: middle; background: var(--vscode-charts-red, #e0524d); }
+  .vista { display: none; }
+  .vista.sel { display: block; }
+  #alertas:empty { display: none; }
+  #alertas { margin: 0 0 8px; }
+  .alerta { font-size: 11px; padding: 4px 6px; border-radius: 3px; margin-bottom: 3px; border-left: 3px solid;
+            background: var(--vscode-editorWidget-background, #8881); }
+  .alerta.n3 { border-color: var(--vscode-charts-red, #e0524d); }
+  .alerta.n2 { border-color: var(--vscode-charts-yellow, #f2b33d); }
+  .alerta.n1 { border-color: var(--vscode-charts-blue, #3794ff); }
+  .tarjeta { border-top: 1px solid var(--vscode-editorWidget-border, #8884); padding: 8px 0 6px; }
+  .tarjeta h3 { font-size: 11px; font-weight: 600; margin: 0 0 6px; opacity: .85; }
+  .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; }
+  .cifra b { display: block; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .cifra span { font-size: 11px; opacity: .7; }
+  .renglon { display: grid; grid-template-columns: minmax(60px, 36%) 1fr 92px; align-items: center; gap: 6px; margin: 3px 0; font-size: 11px; }
+  .renglon .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .renglon .val { font-variant-numeric: tabular-nums; opacity: .8; text-align: right; }
+  .medidor { height: 6px; background: var(--vscode-editorWidget-border, #8884); border-radius: 3px; overflow: hidden; }
+  .medidor > i { display: block; height: 100%; width: 0; background: var(--vscode-charts-blue, #3794ff); }
+  .medidor > i.verde { background: var(--vscode-charts-green, #5bc46a); }
+  .medidor > i.ambar { background: var(--vscode-charts-yellow, #f2b33d); }
+  .medidor > i.rojo { background: var(--vscode-charts-red, #e0524d); }
+  .medidor > i.morado { background: var(--vscode-charts-purple, #a77be0); }
+  .nota { font-size: 11px; opacity: .7; margin-top: 3px; }
+  .ritmo { font-size: 12px; margin: 2px 0 4px; }
+  .ritmo.alcanza { color: var(--vscode-charts-red, #e0524d); }
+  .ritmo.holgado { color: var(--vscode-charts-green, #5bc46a); }
+  .calor { display: grid; grid-template-columns: 26px repeat(24, 1fr); gap: 1px; font-size: 10px; align-items: center; }
+  .calor .c { height: 9px; border-radius: 1px; background: var(--vscode-charts-blue, #3794ff); }
+  .calor .c0 { background: var(--vscode-editorWidget-border, #8884); opacity: .35; }
+  .calor .h { opacity: .6; text-align: center; }
+  .servicio { display: grid; grid-template-columns: 10px 1fr auto 16px; gap: 6px; align-items: center; font-size: 11px; margin: 4px 0; }
+  .luz { width: 8px; height: 8px; border-radius: 4px; background: var(--vscode-charts-green, #5bc46a); }
+  .luz.mal { background: var(--vscode-charts-red, #e0524d); }
+  .servicio .quitar { border: none; background: none; color: var(--vscode-foreground); opacity: .5; cursor: pointer; padding: 0; font: inherit; }
+  .boton-chico { font: inherit; font-size: 11px; border: none; border-radius: 3px; padding: 3px 8px; cursor: pointer; margin-top: 4px;
+                 color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
+  .repo { font-size: 11px; margin: 4px 0; }
+  .repo b { font-weight: 600; }
+  #btn-configurar { display: none; margin-top: 6px; font: inherit; border: none; border-radius: 3px; padding: 4px 8px;
+                    cursor: pointer; color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+</style>
+</head>
+<body>
+  <canvas id="lienzo" title="Clic para mimar al koala"></canvas>
+  <div id="estado">Preparando el laboratorio…</div>
+  <nav class="pestanas" role="tablist">
+    <button data-pestana="mascota" class="sel">Mascota</button>
+    <button data-pestana="consumo">Consumo</button>
+    <button data-pestana="hoy">Hoy</button>
+    <button data-pestana="sistema">Sistema</button>
+  </nav>
+  <div id="alertas"></div>
+  <section class="vista sel" id="v-mascota">
+  <div class="fila"><span>Saciedad</span><div class="barra"><i id="b-saciedad"></i></div><span class="num" id="n-saciedad"></span></div>
+  <div class="fila"><span>Ánimo</span><div class="barra"><i id="b-animo"></i></div><span class="num" id="n-animo"></span></div>
+  <div class="fila"><span id="l-energia">Energía</span><div class="barra"><i id="b-energia"></i></div><span class="num" id="n-energia"></span></div>
+  <div class="sub" id="s-energia"></div>
+  <div class="fila"><span>Agua</span><div class="barra"><i id="b-agua"></i></div><span class="num" id="n-agua"></span></div>
+  <div class="botones">
+    <button data-accion="comer">Comer</button>
+    <button data-accion="jugar">Jugar</button>
+    <button data-accion="mimar">Mimar</button>
+    <button data-accion="dormir" id="btn-dormir">Dormir</button>
+  </div>
+  <button class="boton-agua" id="btn-agua" title="Suma un vaso a tu meta del día">💧 Tomé un vaso de agua</button>
+  <div class="alarmas-caja">
+    <div class="tit-alarmas">Alarmas</div>
+    <div id="alarmas-lista"></div>
+    <div class="alarma-form">
+      <input type="time" id="alarma-hora" aria-label="Hora">
+      <input type="text" id="alarma-msg" placeholder="¿Qué te recuerdo?" maxlength="80" aria-label="Mensaje">
+      <select id="alarma-rep" aria-label="Repetición">
+        <option value="una">Una vez</option><option value="diaria">Diaria</option><option value="laborables">Lun–vie</option>
+      </select>
+      <button id="alarma-agregar" title="Agregar alarma">+</button>
+    </div>
+  </div>
+  <div class="pomo">
+    <div class="probeta">
+      <div class="tit"><span id="pomo-fase">Pomodoro</span><b id="pomo-reloj">25:00</b></div>
+      <div class="barra"><i id="pomo-barra"></i></div>
+      <div class="sub" id="pomo-sub"></div>
+    </div>
+    <div class="pomo-botones">
+      <button id="pomo-alternar">Iniciar experimento</button>
+      <button id="pomo-detener">Detener</button>
+    </div>
+  </div>
+  </section>
+  <section class="vista" id="v-consumo">
+  <div class="lab">
+    <h3>Límites de tu plan</h3>
+    <div class="probeta">
+      <div class="tit"><span>Sesión (5 h)</span><b id="p-cinco">—</b></div>
+      <div class="tubo"><i id="t-cinco"></i><span class="marcas"></span></div>
+      <div class="sub" id="s-cinco"></div>
+    </div>
+    <div class="probeta">
+      <div class="tit"><span>Semana</span><b id="p-semana">—</b></div>
+      <div class="tubo"><i id="t-semana"></i><span class="marcas"></span></div>
+      <div class="sub" id="s-semana"></div>
+    </div>
+    <div id="uso-nota"></div>
+    <button id="btn-configurar">Configurar monitor</button>
+  </div>
+  <div id="consumo-extra"></div>
+  </section>
+  <section class="vista" id="v-hoy"><div id="hoy"></div></section>
+  <section class="vista" id="v-sistema"><div id="sistema"></div></section>
+  <script nonce="${nonce}" src="${script}"></script>
+  <script nonce="${nonce}" src="${scriptPanel}"></script>
+</body>
+</html>`;
+}
+
+module.exports = { htmlVista };
