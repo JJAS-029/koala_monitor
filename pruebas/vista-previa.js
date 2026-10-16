@@ -79,9 +79,10 @@ if (process.env.API_FALSA) {
 }
 // DEMO=1: nombre de equipo ficticio para capturas de documentación.
 if (process.env.IDIOMA) ajustes.idioma = process.env.IDIOMA; // IDIOMA=en para ver el panel en inglés
+if (process.env.CIUDAD) ajustes['clima.ciudad'] = process.env.CIUDAD; // CIUDAD="Toluca de Lerdo, Estado de México, México"
 if (process.env.DEMO) {
   require('os').hostname = () => 'mi-servidor';
-  ajustes['clima.ciudad'] = 'Toluca';
+  if (!process.env.CIUDAD) ajustes['clima.ciudad'] = 'Toluca';
 }
 const cargar = Module._load;
 Module._load = function (req, ...r) { return req === 'vscode' ? vscodeFalso : cargar.call(this, req, ...r); };
