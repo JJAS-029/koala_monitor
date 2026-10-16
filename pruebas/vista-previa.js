@@ -48,7 +48,7 @@ const vscodeFalso = {
     onDidChangeDiagnostics: evento(),
   },
   extensions: { getExtension: () => undefined },
-  env: { openExternal: async () => true },
+  env: { openExternal: async () => true, language: 'es' },
   commands: { registerCommand: () => ({ dispose() {} }), executeCommand: async () => {} },
 };
 // API_FALSA=1: activa la consulta a Anthropic y responde con datos de ejemplo (no sale a internet).
@@ -78,6 +78,7 @@ if (process.env.API_FALSA) {
   };
 }
 // DEMO=1: nombre de equipo ficticio para capturas de documentación.
+if (process.env.IDIOMA) ajustes.idioma = process.env.IDIOMA; // IDIOMA=en para ver el panel en inglés
 if (process.env.DEMO) {
   require('os').hostname = () => 'mi-servidor';
   ajustes['clima.ciudad'] = 'Toluca';

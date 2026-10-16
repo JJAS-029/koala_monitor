@@ -11,6 +11,8 @@ const { crearRutina } = require('./rutina');
 const { crearAlarmas } = require('./alarmas');
 const { htmlVista } = require('./vista');
 const anthropic = require('./anthropic');
+const idioma = require('./idioma');
+const { t } = idioma;
 const { crearPomodoro } = require('./pomodoro');
 const { crearConfigurador } = require('./configurar');
 const {
@@ -159,7 +161,7 @@ function leerEstadoClaude() {
   if (necesita && nuevo && !primeraLectura) {
     if (vista && vista.visible) vista.webview.postMessage({ tipo: 'accion', accion: 'pedirAtencion', datos: necesita });
     if (config().get('avisarCuandoClaudeEspera', true)) {
-      vscode.window.showWarningMessage(`🐨✋ Claude te necesita${necesita.mensaje ? ': ' + necesita.mensaje : '.'}`);
+      vscode.window.showWarningMessage(`🐨✋ ${t('Claude te necesita')}${necesita.mensaje ? ': ' + necesita.mensaje : '.'}`);
     }
   }
   if (!!necesita !== !!claudeNecesita) { claudeNecesita = necesita; enviarEstado(); }
@@ -170,7 +172,7 @@ function leerEstadoClaude() {
     const dur = datos.duracion;
     if (vista && vista.visible) vista.webview.postMessage({ tipo: 'accion', accion: 'claudeListo', datos: { duracion: dur } });
     if (!vscode.window.state.focused || config().get('avisarTurnoLargoSiempre', false)) {
-      vscode.window.showInformationMessage(`🐨📜 Claude terminó (${duracionTexto(dur)}).`);
+      vscode.window.showInformationMessage(t('🐨📜 Claude terminó ({0}).', duracionTexto(dur)));
     }
   }
 
@@ -324,7 +326,7 @@ function actualizarConsumo() {
 function avisarSiHaceFalta(u) {
   const umbral = config().get('avisarEnPorcentaje', 90);
   const avisos = contexto.globalState.get(CLAVE_AVISOS, {});
-  const nombres = { cinco: 'la sesión (5 h)', semana: 'la semana' };
+  const nombres = { cinco: t('la sesión (5 h)'), semana: t('la semana') };
   let cambio = false;
   for (const clave of ['cinco', 'semana']) {
     const v = u[clave];
@@ -334,9 +336,9 @@ function avisarSiHaceFalta(u) {
     avisos[clave] = id;
     cambio = true;
     vscode.window.showWarningMessage(
-      `🐨 El koala midió ${Math.round(v.pct)} % de ${nombres[clave]} de Claude Code.` +
-        (v.reinicio ? ` Se reinicia en ${formatoFalta(v.reinicio)}.` : ''),
-      'Ver consumo'
+      t('🐨 El koala midió {0} % de {1} de Claude Code.', Math.round(v.pct), nombres[clave]) +
+        (v.reinicio ? ' ' + t('Se reinicia en {0}.', formatoFalta(v.reinicio)) : ''),
+      t('Ver consumo')
     ).then((r) => { if (r) mostrarPanel(); });
   }
   if (cambio) contexto.globalState.update(CLAVE_AVISOS, avisos);
@@ -350,7 +352,7 @@ function pintarBarra(u) {
   }
   const partes = [];
   if (u.cinco) partes.push(`5h ${Math.round(u.cinco.pct)}%`);
-  if (u.semana) partes.push(`sem ${Math.round(u.semana.pct)}%`);
+  if (u.semana) partes.push(`${t('sem')} ${Math.round(u.semana.pct)}%`);
   if (!partes.length) partes.push(`${formatoTokens(u.local.tokens5h)} tok/5h`);
   barra.text = `$(beaker) ${partes.join(' · ')}`;
   const max = Math.max(u.cinco ? u.cinco.pct : 0, u.semana ? u.semana.pct : 0);
@@ -362,17 +364,17 @@ function pintarBarra(u) {
 }
 
 function textoConsumo(u) {
-  const lineas = ['Koala científico — consumo de Claude Code'];
+  const lineas = [t('Koala científico — consumo de Claude Code')];
   const linea = (nombre, v) => {
-    if (!v) return `${nombre}: sin dato oficial`;
-    if (v.reiniciada) return `${nombre}: reiniciada (esperando dato nuevo)`;
-    return `${nombre}: ${Math.round(v.pct)} %` + (v.reinicio ? `, se reinicia en ${formatoFalta(v.reinicio)}` : '');
+    if (!v) return t('{0}: sin dato oficial', nombre);
+    if (v.reiniciada) return t('{0}: reiniciada (esperando dato nuevo)', nombre);
+    return `${nombre}: ${Math.round(v.pct)} %` + (v.reinicio ? t(', se reinicia en {0}', formatoFalta(v.reinicio)) : '');
   };
-  lineas.push(linea('Sesión (5 h)', u.cinco));
-  lineas.push(linea('Semana', u.semana));
-  lineas.push(`Tokens locales: ${formatoTokens(u.local.tokens5h)} en la sesión, ${formatoTokens(u.local.tokens7d)} en la semana`);
-  if (u.actualizado) lineas.push(`Dato oficial de hace ${Math.max(0, Math.round((Date.now() - u.actualizado) / 60000))} min`);
-  else lineas.push('Sin dato oficial: ejecuta "Koala científico: configurar monitor de Claude Code"');
+  lineas.push(linea(t('Sesión (5 h)'), u.cinco));
+  lineas.push(linea(t('Semana'), u.semana));
+  lineas.push(t('Tokens locales: {0} en la sesión, {1} en la semana', formatoTokens(u.local.tokens5h), formatoTokens(u.local.tokens7d)));
+  if (u.actualizado) lineas.push(t('Dato oficial de hace {0} min', Math.max(0, Math.round((Date.now() - u.actualizado) / 60000))));
+  else lineas.push(t('Sin dato oficial: ejecuta "Koala científico: configurar monitor de Claude Code"'));
   return lineas.join('\n');
 }
 
@@ -396,9 +398,9 @@ async function consultarAnthropic(forzar) {
 
 async function activarApi() {
   const ok = await vscode.window.showInformationMessage(
-    'El koala consultará cada pocos minutos tu uso real en api.anthropic.com con la sesión que Claude Code ya guarda en este equipo. El token solo se envía a Anthropic y nunca se muestra. ¿Activar?',
-    { modal: true }, 'Activar');
-  if (ok !== 'Activar') return;
+    t('El koala consultará cada pocos minutos tu uso real en api.anthropic.com con la sesión que Claude Code ya guarda en este equipo. El token solo se envía a Anthropic y nunca se muestra. ¿Activar?'),
+    { modal: true }, t('Activar'));
+  if (ok !== t('Activar')) return;
   await config().update('usoDesdeAnthropic', true, vscode.ConfigurationTarget.Global);
   consultarAnthropic(true);
 }
@@ -412,23 +414,23 @@ function calcularAlertas(u) {
   const a = [];
   const umbral = config().get('avisarEnPorcentaje', 90);
   const max = Math.max(u.cinco && !u.cinco.reiniciada ? u.cinco.pct : 0, u.semana && !u.semana.reiniciada ? u.semana.pct : 0);
-  if (max >= umbral) a.push({ nivel: 3, texto: `¡Casi al límite de Claude Code (${Math.round(max)} %)!` });
-  for (const s of servicios) if (!s.ok) a.push({ nivel: 3, texto: `${s.nombre} no responde (${s.detalle})` });
+  if (max >= umbral) a.push({ nivel: 3, pestana: 'consumo', texto: t('¡Casi al límite de Claude Code ({0} %)!', Math.round(max)) });
+  for (const s of servicios) if (!s.ok) a.push({ nivel: 3, pestana: 'sistema', texto: t('{0} no responde ({1})', s.nombre, s.detalle) });
   if (sistema) {
-    if (sistema.temperatura >= 85) a.push({ nivel: 3, texto: `El servidor está a ${sistema.temperatura} °C` });
-    if (sistema.memoria.pct >= 90) a.push({ nivel: 3, texto: `Memoria del servidor al ${Math.round(sistema.memoria.pct)} %` });
-    for (const d of sistema.discos) if (d.pct >= 90) a.push({ nivel: 3, texto: `Disco ${d.ruta} al ${Math.round(d.pct)} %` });
+    if (sistema.temperatura >= 85) a.push({ nivel: 3, pestana: 'sistema', texto: t('El servidor está a {0} °C', sistema.temperatura) });
+    if (sistema.memoria.pct >= 90) a.push({ nivel: 3, pestana: 'sistema', texto: t('Memoria del servidor al {0} %', Math.round(sistema.memoria.pct)) });
+    for (const d of sistema.discos) if (d.pct >= 90) a.push({ nivel: 3, pestana: 'sistema', texto: t('Disco {0} al {1} %', d.ruta, Math.round(d.pct)) });
   }
   if (u.ritmo.estado === 'alcanza') {
-    a.push({ nivel: 2, texto: `A este ritmo llegas al 100 % a las ${horaCorta(u.ritmo.eta)}, antes del corte` });
+    a.push({ nivel: 2, pestana: 'consumo', texto: t('A este ritmo llegas al 100 % a las {0}, antes del corte', horaCorta(u.ritmo.eta)) });
   }
   if (u.sesion && u.sesion.contexto_pct >= 85) {
-    a.push({ nivel: 2, texto: `La conversación de Claude va al ${Math.round(u.sesion.contexto_pct)} % de contexto` });
+    a.push({ nivel: 2, pestana: 'consumo', texto: t('La conversación de Claude va al {0} % de contexto', Math.round(u.sesion.contexto_pct)) });
   }
-  if (diag.errores) a.push({ nivel: 1, texto: `Hay ${diag.errores} error${diag.errores === 1 ? '' : 'es'} en el proyecto` });
+  if (diag.errores) a.push({ nivel: 1, pestana: 'hoy', texto: diag.errores === 1 ? t('Hay 1 error en el proyecto') : t('Hay {0} errores en el proyecto', diag.errores) });
   for (const g of gitInfo || []) {
     const viejo = !g.ultimoCommit || Date.now() - g.ultimoCommit > 3 * HORA;
-    if (g.cambios >= 1 && viejo) a.push({ nivel: 1, texto: `${g.cambios} cambio${g.cambios === 1 ? '' : 's'} sin commit en ${g.nombre}` });
+    if (g.cambios >= 1 && viejo) a.push({ nivel: 1, pestana: 'hoy', texto: g.cambios === 1 ? t('1 cambio sin commit en {0}', g.nombre) : t('{0} cambios sin commit en {1}', g.cambios, g.nombre) });
   }
   return a.sort((x, y) => y.nivel - x.nivel);
 }
@@ -454,11 +456,11 @@ async function medirServicios() {
   const caidos = new Set(servicios.filter((s) => !s.ok).map((s) => s.url));
   for (const s of servicios) {
     if (!s.ok && !serviciosCaidos.has(s.url)) {
-      vscode.window.showWarningMessage(`🐨 ${s.nombre} no responde (${s.detalle}).`);
+      vscode.window.showWarningMessage('🐨 ' + t('{0} no responde ({1})', s.nombre, s.detalle) + '.');
       animar('servicioCaido', { nombre: s.nombre, detalle: s.detalle });
     }
     if (s.ok && serviciosCaidos.has(s.url)) {
-      vscode.window.showInformationMessage(`🐨 ${s.nombre} volvió a responder.`);
+      vscode.window.showInformationMessage('🐨 ' + t('{0} volvió a responder.', s.nombre));
       animar('servicioVuelve', { nombre: s.nombre });
     }
   }
@@ -486,9 +488,9 @@ function animar(accion, datos) {
 }
 
 async function agregarServicio() {
-  const url = await vscode.window.showInputBox({ prompt: 'Dirección a vigilar (http o https)', placeHolder: 'http://127.0.0.1:8000/' });
+  const url = await vscode.window.showInputBox({ prompt: t('Dirección a vigilar (http o https)'), placeHolder: 'http://127.0.0.1:8000/' });
   if (!url) return;
-  const nombre = await vscode.window.showInputBox({ prompt: 'Nombre corto', value: new URL(url).host });
+  const nombre = await vscode.window.showInputBox({ prompt: t('Nombre corto'), value: new URL(url).host });
   const lista = config().get('servicios', []).filter((s) => s.url !== url);
   lista.push({ nombre: nombre || url, url });
   await config().update('servicios', lista, vscode.ConfigurationTarget.Global);
@@ -597,17 +599,17 @@ let reintentoClima = null;
 
 // ---------- Alarmas ----------
 function alSonarAlarma(a, atraso, pospuesta) {
-  const texto = `⏰ ${a.hora} — ${a.mensaje}` + (atraso ? ` (hace ${atraso} min)` : '') + (pospuesta ? ' (pospuesta)' : '');
+  const texto = `⏰ ${a.hora} — ${a.mensaje}` + (atraso ? ' ' + t('(hace {0} min)', atraso) : '') + (pospuesta ? ' ' + t('(pospuesta)') : '');
   animar('alarma', { hora: a.hora, mensaje: a.mensaje });
-  vscode.window.showWarningMessage(`🐨 ${texto}`, 'Posponer 5 min', 'Listo').then((r) => {
-    if (r === 'Posponer 5 min') alarmas.posponer(a, 5);
+  vscode.window.showWarningMessage(`🐨 ${texto}`, t('Posponer 5 min'), t('Listo')).then((r) => {
+    if (r === t('Posponer 5 min')) alarmas.posponer(a, 5);
   });
   enviarEstado();
 }
 function crearAlarma(datos) {
   try {
     const a = alarmas.crear(datos);
-    vscode.window.showInformationMessage(`🐨 Alarma lista: ${a.hora} — ${a.mensaje}`);
+    vscode.window.showInformationMessage('🐨 ' + t('Alarma lista: {0} — {1}', a.hora, a.mensaje));
   } catch (e) {
     vscode.window.showErrorMessage(`🐨 ${e.message}`);
   }
@@ -615,22 +617,22 @@ function crearAlarma(datos) {
 }
 async function nuevaAlarmaComando() {
   const hora = await vscode.window.showInputBox({
-    prompt: '¿A qué hora? (24 h, HH:MM)', placeHolder: '14:30',
-    validateInput: (t) => (/^\d{1,2}:\d{2}$/.test(t.trim()) ? null : 'Escribe la hora como HH:MM, por ejemplo 09:15'),
+    prompt: t('¿A qué hora? (24 h, HH:MM)'), placeHolder: '14:30',
+    validateInput: (v) => (/^\d{1,2}:\d{2}$/.test(v.trim()) ? null : t('Escribe la hora como HH:MM, por ejemplo 09:15')),
   });
   if (!hora) return;
-  const mensaje = await vscode.window.showInputBox({ prompt: '¿Qué te recuerdo?', placeHolder: 'Junta con el equipo' });
+  const mensaje = await vscode.window.showInputBox({ prompt: t('¿Qué te recuerdo?'), placeHolder: t('Junta con el equipo') });
   if (mensaje === undefined) return;
   const rep = await vscode.window.showQuickPick([
-    { label: 'Solo una vez', valor: 'una' }, { label: 'Todos los días', valor: 'diaria' },
-    { label: 'Lunes a viernes', valor: 'laborables' }, { label: 'Elegir días…', valor: 'elegir' },
-  ], { placeHolder: '¿Cuándo se repite?' });
+    { label: t('Solo una vez'), valor: 'una' }, { label: t('Todos los días'), valor: 'diaria' },
+    { label: t('Lunes a viernes'), valor: 'laborables' }, { label: t('Elegir días…'), valor: 'elegir' },
+  ], { placeHolder: t('¿Cuándo se repite?') });
   if (!rep) return;
   let repeticion = rep.valor;
   if (repeticion === 'elegir') {
     const dias = await vscode.window.showQuickPick(
-      ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'].map((d, i) => ({ label: d, i })),
-      { canPickMany: true, placeHolder: 'Días de la semana' });
+      ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'].map((d, i) => ({ label: t(d), i })),
+      { canPickMany: true, placeHolder: t('Días de la semana') });
     if (!dias || !dias.length) return;
     repeticion = dias.map((d) => d.i);
   }
@@ -639,23 +641,23 @@ async function nuevaAlarmaComando() {
 async function verAlarmasComando() {
   const lista = alarmas.lista();
   if (!lista.length) {
-    const r = await vscode.window.showInformationMessage('🐨 No tienes alarmas.', 'Crear una');
+    const r = await vscode.window.showInformationMessage('🐨 ' + t('No tienes alarmas.'), t('Crear una'));
     if (r) nuevaAlarmaComando();
     return;
   }
   const r = await vscode.window.showQuickPick(lista.map((a) => ({
     label: `${a.activa ? '⏰' : '💤'} ${a.hora} — ${a.mensaje}`, description: a.texto, a,
-  })), { placeHolder: 'Elige una alarma para encenderla, apagarla o borrarla' });
+  })), { placeHolder: t('Elige una alarma para encenderla, apagarla o borrarla') });
   if (!r) return;
-  const accion = await vscode.window.showQuickPick([r.a.activa ? 'Apagar' : 'Encender', 'Borrar'], { placeHolder: `${r.a.hora} — ${r.a.mensaje}` });
-  if (accion === 'Borrar') alarmas.borrar(r.a.id);
+  const accion = await vscode.window.showQuickPick([r.a.activa ? t('Apagar') : t('Encender'), t('Borrar')], { placeHolder: `${r.a.hora} — ${r.a.mensaje}` });
+  if (accion === t('Borrar')) alarmas.borrar(r.a.id);
   else if (accion) alarmas.alternar(r.a.id);
   enviarEstado();
 }
 
 async function elegirCiudad() {
   const texto = await vscode.window.showInputBox({
-    prompt: '¿En qué ciudad estás? (para el clima de la ventana del laboratorio)',
+    prompt: t('¿En qué ciudad estás? (para el clima de la ventana del laboratorio)'),
     placeHolder: 'Toluca, Guadalajara, Monterrey…',
     value: '',
   });
@@ -663,21 +665,21 @@ async function elegirCiudad() {
   if (!texto.trim()) {
     await config().update('clima.ciudad', '', vscode.ConfigurationTarget.Global);
     await contexto.globalState.update('koala.lugarClima', undefined);
-    vscode.window.showInformationMessage('🐨 Clima desactivado: la ventana solo seguirá la hora.');
+    vscode.window.showInformationMessage('🐨 ' + t('Clima desactivado: la ventana solo seguirá la hora.'));
     return;
   }
-  const opciones = await monitor.buscarCiudades(texto);
-  if (!opciones.length) { vscode.window.showWarningMessage(`🐨 No encontré "${texto}". Prueba con otro nombre.`); return; }
+  const opciones = await monitor.buscarCiudades(texto, idioma.esIngles() ? 'en' : 'es');
+  if (!opciones.length) { vscode.window.showWarningMessage('🐨 ' + t('No encontré "{0}". Prueba con otro nombre.', texto)); return; }
   const r = await vscode.window.showQuickPick(
     opciones.map((o) => ({ label: o.nombre, description: o.region, lugar: o })),
-    { placeHolder: 'Elige tu ciudad' });
+    { placeHolder: t('Elige tu ciudad') });
   if (!r) return;
   const etiqueta = `${r.lugar.nombre}, ${r.lugar.region}`;
   await contexto.globalState.update('koala.lugarClima', { ...r.lugar, etiqueta });
   await config().update('clima.ciudad', etiqueta, vscode.ConfigurationTarget.Global);
   await medirClima();
   enviarEstado();
-  if (climaActual && !climaActual.error) vscode.window.showInformationMessage(`🐨 Clima de ${r.lugar.nombre}: ${climaActual.temp} °C.`);
+  if (climaActual && !climaActual.error) vscode.window.showInformationMessage('🐨 ' + t('Clima de {0}: {1} °C.', r.lugar.nombre, climaActual.temp));
 }
 
 function revisarRutina() {
@@ -754,11 +756,12 @@ function alTerminarEnfoque(hoy, descanso) {
   necesidades.animo = limitar(necesidades.animo + 10);
   if (vista) vista.webview.postMessage({ tipo: 'accion', accion: 'festejarPomodoro' });
   vscode.window.showInformationMessage(
-    `🐨🧪 ¡Experimento terminado! Llevas ${hoy} pomodoro${hoy === 1 ? '' : 's'} hoy. Descansa ${descanso} min.`, 'Saltar descanso'
+    '🐨🧪 ' + (hoy === 1 ? t('¡Experimento terminado! Llevas 1 pomodoro hoy. Descansa {0} min.', descanso)
+      : t('¡Experimento terminado! Llevas {0} pomodoros hoy. Descansa {1} min.', hoy, descanso)), t('Saltar descanso')
   ).then((r) => { if (r) pomodoro.iniciarFase('enfoque'); });
 }
 function alTerminarDescanso() {
-  vscode.window.showInformationMessage('🐨 Se acabó el descanso. ¿Otro experimento?', 'Iniciar').then((r) => {
+  vscode.window.showInformationMessage('🐨 ' + t('Se acabó el descanso. ¿Otro experimento?'), t('Iniciar')).then((r) => {
     if (r) pomodoro.iniciarFase('enfoque');
   });
 }
@@ -766,6 +769,7 @@ function alTerminarDescanso() {
 // ---------- Activación ----------
 function activate(ctx) {
   contexto = ctx;
+  idioma.configurarIdioma(config().get('idioma', 'auto'), vscode.env.language);
   ctx.globalState.setKeysForSync([CLAVE_ESTADO, 'koala.logros', 'koala.contadores', 'koala.alarmas']); // ánimo, saciedad y energía viajan con Settings Sync
   cargarEstado();
   configurador = crearConfigurador({ extensionPath: ctx.extensionPath, globalState: ctx.globalState, dirClaude: DIR_CLAUDE });
@@ -794,7 +798,7 @@ function activate(ctx) {
   for (const a of ['comer', 'jugar', 'mimar', 'dormir', 'trabajar']) comando(`koalaCientifico.${a}`, () => ejecutarAccion(a));
   comando('koalaCientifico.consumo', async () => {
     await consumo.escanearTranscripciones();
-    const r = await vscode.window.showInformationMessage(textoConsumo(resumenUso()), { modal: true }, 'Abrir panel');
+    const r = await vscode.window.showInformationMessage(textoConsumo(resumenUso()), { modal: true }, t('Abrir panel'));
     if (r) mostrarPanel();
   });
   comando('koalaCientifico.configurar', () => configurador.configurarMonitor());
@@ -823,7 +827,10 @@ function activate(ctx) {
   ctx.subscriptions.push(...eventos);
 
   ctx.subscriptions.push(vscode.workspace.onDidChangeConfiguration((e) => {
-    if (e.affectsConfiguration('koalaCientifico.servicios')) medirServicios();
+    if (e.affectsConfiguration('koalaCientifico.idioma')) {
+      idioma.configurarIdioma(config().get('idioma', 'auto'), vscode.env.language);
+      if (vista) vista.webview.html = htmlVista(vista.webview, contexto.extensionUri);
+    } else if (e.affectsConfiguration('koalaCientifico.servicios')) medirServicios();
     else if (e.affectsConfiguration('koalaCientifico.clima')) medirClima().then(enviarEstado);
     else if (e.affectsConfiguration('koalaCientifico.usoDesdeAnthropic')) consultarAnthropic(true);
     else if (e.affectsConfiguration('koalaCientifico')) actualizarConsumo();

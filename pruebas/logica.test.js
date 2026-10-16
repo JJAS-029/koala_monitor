@@ -258,3 +258,42 @@ const { rutaComando } = require(path.join(raiz, 'configurar.js'));
 test('configurar: rutas con / para cualquier consola', () => {
   assert.equal(rutaComando(['home', 'josue', '.claude', 'koala', 'x.py'].join(path.sep)), 'home/josue/.claude/koala/x.py');
 });
+
+// ---------- idioma ----------
+const idioma = require(path.join(raiz, 'idioma.js'));
+const fs = require('fs');
+
+test('idioma: elige por el de VS Code o por el ajuste', () => {
+  idioma.configurarIdioma('auto', 'es-MX'); assert.equal(idioma.esIngles(), false);
+  idioma.configurarIdioma('auto', 'en-US'); assert.equal(idioma.esIngles(), true);
+  idioma.configurarIdioma('auto', 'pt-br'); assert.equal(idioma.esIngles(), true, 'otros idiomas caen en inglés');
+  idioma.configurarIdioma('es', 'en-US'); assert.equal(idioma.esIngles(), false, 'el ajuste manda');
+  idioma.configurarIdioma('en');
+  assert.equal(idioma.t('Hay {0} errores en el proyecto', 3), 'There are 3 errors in the project');
+  assert.equal(idioma.t('texto sin traducción {0}', 1), 'texto sin traducción 1', 'sin traducción, queda el español');
+  idioma.configurarIdioma('es');
+  assert.equal(idioma.t('Hay {0} errores en el proyecto', 3), 'Hay 3 errores en el proyecto');
+});
+
+test('idioma: toda frase del código tiene traducción al inglés', () => {
+  const en = JSON.parse(fs.readFileSync(path.join(raiz, 'l10n', 'en.json'), 'utf8'));
+  const faltan = [];
+  const archivos = ['extension.js', 'vista.js', 'anthropic.js', 'configurar.js', 'monitor.js', 'alarmas.js', 'pomodoro.js', 'consumo.js', 'rutina.js',
+    'media/koala.js', 'media/panel.js'];
+  for (const a of archivos) {
+    const s = fs.readFileSync(path.join(raiz, a), 'utf8');
+    for (const m of s.matchAll(/\b[tT]\('((?:[^'\\]|\\.)*)'/g)) {
+      const clave = m[1].replace(/\\'/g, "'");
+      if (!(clave in en) && clave !== 'texto en español') faltan.push(`${a}: ${clave}`);
+    }
+  }
+  assert.deepEqual(faltan, []);
+  // Los logros (se traducen con t(l.nombre) / t(l.desc))
+  for (const l of LOGROS) { assert.ok(l.nombre in en, l.nombre); assert.ok(l.desc in en, l.desc); }
+  // package.json: las mismas claves en los dos idiomas
+  const nlsEn = Object.keys(JSON.parse(fs.readFileSync(path.join(raiz, 'package.nls.json'), 'utf8'))).sort();
+  const nlsEs = Object.keys(JSON.parse(fs.readFileSync(path.join(raiz, 'package.nls.es.json'), 'utf8'))).sort();
+  assert.deepEqual(nlsEn, nlsEs);
+  const pkg = fs.readFileSync(path.join(raiz, 'package.json'), 'utf8');
+  for (const m of pkg.matchAll(/"%([^%]+)%"/g)) assert.ok(nlsEn.includes(m[1]), 'falta ' + m[1] + ' en package.nls.json');
+});

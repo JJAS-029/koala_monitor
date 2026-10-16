@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { execFileSync } = require('child_process');
+const { t } = require('./idioma');
 
 function tokenClaude(dirClaude) {
   let datos = null;
@@ -19,11 +20,11 @@ function tokenClaude(dirClaude) {
         datos = JSON.parse(crudo.trim());
       } catch (err) { datos = null; }
     }
-    if (!datos) return { error: 'No encontré la sesión de Claude Code (~/.claude/.credentials.json o el llavero de macOS).' };
+    if (!datos) return { error: t('No encontré la sesión de Claude Code (~/.claude/.credentials.json o el llavero de macOS).') };
   }
   const o = datos && datos.claudeAiOauth;
-  if (!o || !o.accessToken) return { error: 'La sesión de Claude Code no tiene token OAuth (¿usas una API key?).' };
-  if (o.expiresAt && o.expiresAt < Date.now()) return { error: 'El token de Claude Code venció; se renueva solo la próxima vez que uses Claude.' };
+  if (!o || !o.accessToken) return { error: t('La sesión de Claude Code no tiene token OAuth (¿usas una API key?).') };
+  if (o.expiresAt && o.expiresAt < Date.now()) return { error: t('El token de Claude Code venció; se renueva solo la próxima vez que uses Claude.') };
   return { token: o.accessToken };
 }
 
@@ -43,7 +44,7 @@ function interpretarUso(cuerpo) {
   for (const [clave, valor] of Object.entries(d)) {
     if (clave === 'five_hour' || clave === 'seven_day') continue;
     const v = ventanaApi(valor);
-    if (v) extras.push({ nombre: NOMBRES_EXTRA[clave] || clave.replace(/_/g, ' '), pct: v.pct, reinicio: v.resets_at ? v.resets_at * 1000 : null });
+    if (v) extras.push({ nombre: NOMBRES_EXTRA[clave] ? t(NOMBRES_EXTRA[clave]) : clave.replace(/_/g, ' '), pct: v.pct, reinicio: v.resets_at ? v.resets_at * 1000 : null });
   }
   return { five_hour: ventanaApi(d.five_hour), seven_day: ventanaApi(d.seven_day), extras, actualizado: Math.round(Date.now() / 1000) };
 }
@@ -59,8 +60,8 @@ function pedirUso(token) {
       res.on('data', (d) => { if (cuerpo.length < 200000) cuerpo += d; });
       res.on('end', () => resolver({ codigo: res.statusCode, cuerpo }));
     });
-    req.on('timeout', () => { req.destroy(); resolver({ error: 'sin respuesta de api.anthropic.com' }); });
-    req.on('error', (e) => resolver({ error: `sin conexión (${e.code || 'error'})` }));
+    req.on('timeout', () => { req.destroy(); resolver({ error: t('sin respuesta de api.anthropic.com') }); });
+    req.on('error', (e) => resolver({ error: t('sin conexión ({0})', e.code || 'error') }));
   });
 }
 
@@ -70,13 +71,13 @@ async function consultarUso(dirClaude) {
   if (cred.error) return { error: cred.error };
   const r = await pedirUso(cred.token);
   if (r.error) return { error: r.error };
-  if (r.codigo === 401 || r.codigo === 403) return { error: 'Anthropic rechazó el token; abre Claude Code para renovar la sesión.' };
-  if (r.codigo === 429) return { error: 'Demasiadas consultas; el koala espera 15 min.', esperarMin: 15 };
-  if (r.codigo !== 200) return { error: `Respuesta inesperada (${r.codigo}).` };
+  if (r.codigo === 401 || r.codigo === 403) return { error: t('Anthropic rechazó el token; abre Claude Code para renovar la sesión.') };
+  if (r.codigo === 429) return { error: t('Demasiadas consultas; el koala espera 15 min.'), esperarMin: 15 };
+  if (r.codigo !== 200) return { error: t('Respuesta inesperada ({0}).', r.codigo) };
   try {
     return { uso: interpretarUso(r.cuerpo) };
   } catch (e) {
-    return { error: 'No se pudo leer la respuesta de Anthropic.' };
+    return { error: t('No se pudo leer la respuesta de Anthropic.') };
   }
 }
 

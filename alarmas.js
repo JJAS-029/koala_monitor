@@ -2,6 +2,7 @@
 // Alarmas del koala: a una hora (HH:MM) con un mensaje; se repiten una vez, diario, entre semana o en días elegidos.
 // Se guardan en globalState ('koala.alarmas') y viajan con Settings Sync.
 
+const { t } = require('./idioma');
 const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 const VENTANA_ATRASADA_MIN = 60; // si VS Code estaba cerrado, avisa al abrir dentro de esta ventana
 
@@ -38,10 +39,10 @@ function debeSonar(alarma, ahora) {
 }
 
 function describirRepeticion(r) {
-  if (r === 'una') return 'una vez';
-  if (r === 'diaria') return 'todos los días';
-  if (r === 'laborables') return 'lunes a viernes';
-  if (Array.isArray(r)) return r.slice().sort().map((d) => DIAS[d]).join(', ');
+  if (r === 'una') return t('una vez');
+  if (r === 'diaria') return t('todos los días');
+  if (r === 'laborables') return t('lunes a viernes');
+  if (Array.isArray(r)) return r.slice().sort().map((d) => t(DIAS[d])).join(', ');
   return '';
 }
 
@@ -76,10 +77,10 @@ function crearAlarmas({ contexto, alSonar }) {
     revisar,
     lista: () => lista.map((a) => ({ ...a, texto: describirRepeticion(a.repeticion) })),
     crear({ hora, mensaje, repeticion }) {
-      if (minutosDelDia(hora) === null) throw new Error('Hora inválida (usa HH:MM)');
+      if (minutosDelDia(hora) === null) throw new Error(t('Hora inválida (usa HH:MM)'));
       const a = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        hora: hora.padStart(5, '0'), mensaje: String(mensaje || '').trim() || '¡Es hora!', repeticion, activa: true, ultimaVez: null,
+        hora: hora.padStart(5, '0'), mensaje: String(mensaje || '').trim() || t('¡Es hora!'), repeticion, activa: true, ultimaVez: null,
       };
       if (repeticion === 'una') a.fecha = fechaParaUnaVez(a.hora);
       // Si se crea para hoy a una hora que ya pasó, no debe sonar de inmediato.

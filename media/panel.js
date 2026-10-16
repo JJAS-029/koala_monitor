@@ -1,17 +1,23 @@
 // Koala científico: pestañas de estadísticas (Consumo, Hoy, Sistema) y alertas.
 // Se apoya en koala.js, que abre el canal con la extensión (window.koalaVscode).
+// Textos: T('texto en español', ...) traduce con el diccionario que inyecta la extensión (window.koalaT).
 (function () {
   'use strict';
 
   const vscode = window.koalaVscode || { postMessage() {}, getState() {}, setState() {} };
   const $ = (id) => document.getElementById(id);
+  const T = window.koalaT || function (s) {
+    const a = arguments;
+    return String(s).replace(/\{(\d+)\}/g, (m, i) => (a[+i + 1] === undefined ? m : String(a[+i + 1])));
+  };
+  const LOCALE = window.KOALA_LOCALE || 'es-MX';
   let est = null;
 
   // ---------- Utilidades ----------
   const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   function tokens(n) {
     if (n >= 1e6) return (n / 1e6).toFixed(1) + ' M';
-    if (n >= 1e3) return Math.round(n / 1e3) + ' mil';
+    if (n >= 1e3) return T('{0} mil', Math.round(n / 1e3));
     return String(Math.round(n || 0));
   }
   function bytes(n) {
@@ -30,9 +36,9 @@
   }
   function hace(ms) {
     const min = Math.max(0, Math.round((Date.now() - ms) / 60000));
-    if (min < 60) return 'hace ' + min + ' min';
+    if (min < 60) return T('hace {0} min', min);
     const h = Math.floor(min / 60);
-    return h < 24 ? 'hace ' + h + ' h' : 'hace ' + Math.floor(h / 24) + ' d';
+    return h < 24 ? T('hace {0} h', h) : T('hace {0} d', Math.floor(h / 24));
   }
   const pct = (v) => (v == null ? '—' : Math.round(v) + ' %');
   const nivel = (v, ambar, rojo) => (v >= rojo ? 'rojo' : v >= ambar ? 'ambar' : 'verde');
@@ -53,7 +59,7 @@
   }
   function ranking(obj, n, formato, clase) {
     const filas = Object.entries(obj || {}).sort((a, b) => b[1] - a[1]).slice(0, n);
-    if (!filas.length) return '<div class="nota">Sin datos todavía.</div>';
+    if (!filas.length) return '<div class="nota">' + T('Sin datos todavía.') + '</div>';
     const max = filas[0][1] || 1;
     return filas.map(([k, v]) => renglon(k, formato(v), (100 * v) / max, clase)).join('');
   }
@@ -83,13 +89,9 @@
   function pintarAlertas() {
     const a = (est.alertas || []).slice(0, 2);
     pintar('alertas', a.map((x) => '<div class="alerta n' + x.nivel + '">' + esc(x.texto) + '</div>').join(''));
-    // punto rojo en la pestaña que corresponde
+    // punto rojo en la pestaña de cada alerta
     const marca = { consumo: false, hoy: false, sistema: false };
-    for (const x of est.alertas || []) {
-      if (/Claude|ritmo|contexto/.test(x.texto)) marca.consumo = true;
-      else if (/error|commit/.test(x.texto)) marca.hoy = true;
-      else marca.sistema = true;
-    }
+    for (const x of est.alertas || []) marca[x.pestana || 'sistema'] = true;
     document.querySelectorAll('[data-pestana]').forEach((b) => {
       const p = b.getAttribute('data-pestana');
       let punto = b.querySelector('.punto');
@@ -104,52 +106,52 @@
     const r = u.ritmo || {};
     let ritmo;
     if (r.estado === 'alcanza') {
-      ritmo = '<div class="ritmo alcanza">⚠ A este ritmo llegas al 100 % a las ' + hora(r.eta) + ', antes del corte de las ' + hora(u.cinco.reinicio) + '.</div>';
+      ritmo = '<div class="ritmo alcanza">⚠ ' + T('A este ritmo llegas al 100 % a las {0}, antes del corte de las {1}.', hora(r.eta), hora(u.cinco.reinicio)) + '</div>';
     } else if (r.estado === 'holgado') {
-      ritmo = '<div class="ritmo holgado">✓ Vas holgado: a este ritmo llegarías al 100 % hasta las ' + hora(r.eta) + ', después del corte.</div>';
+      ritmo = '<div class="ritmo holgado">✓ ' + T('Vas holgado: a este ritmo llegarías al 100 % hasta las {0}, después del corte.', hora(r.eta)) + '</div>';
     } else if (r.estado === 'quieto') {
-      ritmo = '<div class="ritmo">Sin consumo en los últimos 30 min.</div>';
+      ritmo = '<div class="ritmo">' + T('Sin consumo en los últimos 30 min.') + '</div>';
     } else {
-      ritmo = '<div class="ritmo">Falta el % oficial para proyectar; ritmo local abajo.</div>';
+      ritmo = '<div class="ritmo">' + T('Falta el % oficial para proyectar; ritmo local abajo.') + '</div>';
     }
     const cifrasRitmo = '<div class="cifras">' +
-      cifra(tokens(r.tokPorMin || 0) + '/min', 'tokens, últimos 30 min') +
-      cifra(r.pctPorHora != null ? r.pctPorHora.toFixed(1) + ' %/h' : '—', 'de la sesión por hora') + '</div>';
+      cifra(tokens(r.tokPorMin || 0) + '/min', T('tokens, últimos 30 min')) +
+      cifra(r.pctPorHora != null ? r.pctPorHora.toFixed(1) + ' %/h' : '—', T('de la sesión por hora')) + '</div>';
 
     const s = u.sesion;
     let conv;
     if (s) {
       const ctx = s.contexto_pct;
-      conv = (ctx != null ? renglon('Contexto', pct(ctx), ctx, nivel(ctx, 70, 85),
-        'Qué tan llena está la conversación; cerca del 100 % Claude la resume (compacta) y olvida detalles') : '') +
+      conv = (ctx != null ? renglon(T('Contexto'), pct(ctx), ctx, nivel(ctx, 70, 85),
+        T('Qué tan llena está la conversación; cerca del 100 % Claude la resume (compacta) y olvida detalles')) : '') +
         '<div class="cifras">' +
-        cifra(s.costo_usd != null ? '$' + s.costo_usd.toFixed(2) : '—', 'USD equivalentes') +
-        cifra('+' + (s.lineas_mas || 0) + ' / −' + (s.lineas_menos || 0), 'líneas cambiadas') +
-        cifra(s.duracion_ms ? duracion(s.duracion_ms / 1000) : '—', 'de conversación') + '</div>' +
-        '<div class="nota">' + esc(s.carpeta || 'conversación') + ' · dato ' + hace(s.ts) + '</div>';
+        cifra(s.costo_usd != null ? '$' + s.costo_usd.toFixed(2) : '—', T('USD equivalentes')) +
+        cifra('+' + (s.lineas_mas || 0) + ' / −' + (s.lineas_menos || 0), T('líneas cambiadas')) +
+        cifra(s.duracion_ms ? duracion(s.duracion_ms / 1000) : '—', T('de conversación')) + '</div>' +
+        '<div class="nota">' + esc(s.carpeta || T('conversación')) + ' · ' + T('dato {0}', hace(s.ts)) + '</div>';
     } else {
-      conv = '<div class="nota">Llega desde la status line de Claude Code (al usar <code>claude</code> en una terminal).</div>';
+      conv = '<div class="nota">' + T('Llega desde la status line de Claude Code (al usar <code>claude</code> en una terminal).') + '</div>';
     }
 
     const h = est.hoy || {};
     const cache = h.cachePct;
-    const eficiencia = cache == null ? '<div class="nota">Sin mensajes hoy.</div>' :
-      renglon('Reutilizado de caché', pct(cache), cache, nivel(100 - cache, 30, 60),
-        'Parte de la entrada que Claude leyó de caché en vez de procesarla de nuevo; alto = sesiones largas y eficientes') +
-      '<div class="nota">' + (cache >= 80 ? 'Muy eficiente: conversaciones largas y con contexto estable.' :
-        cache >= 50 ? 'Aceptable.' : 'Baja: muchas conversaciones nuevas o cambios de contexto.') + '</div>';
+    const eficiencia = cache == null ? '<div class="nota">' + T('Sin mensajes hoy.') + '</div>' :
+      renglon(T('Reutilizado de caché'), pct(cache), cache, nivel(100 - cache, 30, 60),
+        T('Parte de la entrada que Claude leyó de caché en vez de procesarla de nuevo; alto = sesiones largas y eficientes')) +
+      '<div class="nota">' + (cache >= 80 ? T('Muy eficiente: conversaciones largas y con contexto estable.') :
+        cache >= 50 ? T('Aceptable.') : T('Baja: muchas conversaciones nuevas o cambios de contexto.')) + '</div>';
 
     pintar('consumo-extra',
       tarjetaFuente(u) +
-      tarjeta('Ritmo y proyección', ritmo + cifrasRitmo) +
+      tarjeta(T('Ritmo y proyección'), ritmo + cifrasRitmo) +
       tarjetaCosto() +
       tarjetaHuella() +
-      tarjeta('Conversación actual', conv) +
-      tarjeta('Eficiencia de caché (hoy)', eficiencia));
+      tarjeta(T('Conversación actual'), conv) +
+      tarjeta(T('Eficiencia de caché (hoy)'), eficiencia));
   }
 
   function dinero(v) {
-    if (v >= 1000) return '$' + Math.round(v).toLocaleString('es-MX');
+    if (v >= 1000) return '$' + Math.round(v).toLocaleString(LOCALE);
     if (v >= 100) return '$' + v.toFixed(0);
     return '$' + v.toFixed(2);
   }
@@ -157,20 +159,20 @@
   function tarjetaFuente(u) {
     const api = u.api || {};
     let html;
-    if (u.fuente === 'anthropic') html = '<div class="nota">✓ Dato real de api.anthropic.com, ' + hace(u.actualizado) + '.</div>';
-    else if (u.fuente === 'statusline') html = '<div class="nota">Dato de la status line de Claude Code, ' + hace(u.actualizado) + '.</div>';
-    else html = '<div class="nota">Sin dato oficial todavía.</div>';
+    if (u.fuente === 'anthropic') html = '<div class="nota">✓ ' + T('Dato real de api.anthropic.com, {0}.', hace(u.actualizado)) + '</div>';
+    else if (u.fuente === 'statusline') html = '<div class="nota">' + T('Dato de la status line de Claude Code, {0}.', hace(u.actualizado)) + '</div>';
+    else html = '<div class="nota">' + T('Sin dato oficial todavía.') + '</div>';
     (u.extras || []).forEach((x) => {
-      html += renglon(x.nombre, pct(x.pct), x.pct, nivel(x.pct, 75, 90), x.reinicio ? 'Se reinicia ' + hora(x.reinicio) : '');
+      html += renglon(x.nombre, pct(x.pct), x.pct, nivel(x.pct, 75, 90), x.reinicio ? T('Se reinicia {0}', hora(x.reinicio)) : '');
     });
     if (api.activo) {
       if (api.error) html += '<div class="nota">⚠ ' + esc(api.error) + '</div>';
-      html += '<button class="boton-chico" data-msg="consultarApi">Consultar ahora</button>';
+      html += '<button class="boton-chico" data-msg="consultarApi">' + T('Consultar ahora') + '</button>';
     } else {
-      html += '<div class="nota">Puedes pedir el % real directo a Anthropic con la sesión de Claude Code de este equipo (lo mismo que hace el panel de Claude).</div>' +
-        '<button class="boton-chico" data-msg="activarApi">Usar dato directo de Anthropic</button>';
+      html += '<div class="nota">' + T('Puedes pedir el % real directo a Anthropic con la sesión de Claude Code de este equipo (lo mismo que hace el panel de Claude).') + '</div>' +
+        '<button class="boton-chico" data-msg="activarApi">' + T('Usar dato directo de Anthropic') + '</button>';
     }
-    return tarjeta('Fuente del dato', html);
+    return tarjeta(T('Fuente del dato'), html);
   }
 
   function tarjetaCosto() {
@@ -178,20 +180,22 @@
     if (!c) return '';
     const mensual = (c.mes.usd / c.diasMes) * 30;
     let html = '<div class="cifras">' +
-      cifra(dinero(c.hoy.usd), 'hoy') +
-      cifra(dinero(c.cinco.usd), 'esta sesión (5 h)') +
-      cifra(dinero(c.semana.usd), '7 días') +
-      cifra(dinero(c.mes.usd), c.diasMes < 30 ? c.diasMes + ' días registrados' : '30 días') + '</div>';
+      cifra(dinero(c.hoy.usd), T('hoy')) +
+      cifra(dinero(c.cinco.usd), T('esta sesión (5 h)')) +
+      cifra(dinero(c.semana.usd), T('7 días')) +
+      cifra(dinero(c.mes.usd), c.diasMes < 30 ? T('{0} días registrados', c.diasMes) : T('30 días')) + '</div>';
     html += ranking(c.modelosHoy, 4, dinero, 'morado');
     if (c.planUsd > 0) {
       const veces = mensual / c.planUsd;
-      html += '<div class="ritmo ' + (veces >= 1 ? 'holgado' : '') + '">A este paso, ~' + dinero(mensual) + ' al mes en la API: ' +
-        (veces >= 1 ? veces.toFixed(1) + '× lo que pagas (' + dinero(c.planUsd) + ').' : 'menos de lo que pagas (' + dinero(c.planUsd) + ').') + '</div>';
+      html += '<div class="ritmo ' + (veces >= 1 ? 'holgado' : '') + '">' +
+        (veces >= 1
+          ? T('A este paso, ~{0} al mes en la API: {1}× lo que pagas ({2}).', dinero(mensual), veces.toFixed(1), dinero(c.planUsd))
+          : T('A este paso, ~{0} al mes en la API: menos de lo que pagas ({1}).', dinero(mensual), dinero(c.planUsd))) + '</div>';
     } else {
-      html += '<div class="nota">A este paso, ~' + dinero(mensual) + ' al mes. Escribe lo que pagas en <code>koalaCientifico.costoPlanMensualUSD</code> para comparar.</div>';
+      html += '<div class="nota">' + T('A este paso, ~{0} al mes. Escribe lo que pagas en <code>koalaCientifico.costoPlanMensualUSD</code> para comparar.', dinero(mensual)) + '</div>';
     }
-    html += '<div class="nota">Lo que costaría pagando por token con los precios de la API (entrada, salida, escritura y lectura de caché de cada modelo). Con una suscripción no se cobra así.</div>';
-    return tarjeta('Costo equivalente en la API', html);
+    html += '<div class="nota">' + T('Lo que costaría pagando por token con los precios de la API (entrada, salida, escritura y lectura de caché de cada modelo). Con una suscripción no se cobra así.') + '</div>';
+    return tarjeta(T('Costo equivalente en la API'), html);
   }
 
   function energia(wh) {
@@ -206,17 +210,17 @@
     const f = c.aguaMlPorWh;
     const vasos = (c.hoy.wh * f) / 250;
     const cargas = c.hoy.wh / 15; // un celular ≈ 15 Wh
+    const periodo = c.diasMes < 30 ? c.diasMes + ' d' : '30 d';
     let html = '<div class="cifras">' +
-      cifra(energia(c.hoy.wh), 'energía hoy') +
-      cifra(agua(c.hoy.wh * f), 'agua hoy') +
-      cifra(energia(c.mes.wh), 'energía ' + (c.diasMes < 30 ? c.diasMes + ' d' : '30 d')) +
-      cifra(agua(c.mes.wh * f), 'agua ' + (c.diasMes < 30 ? c.diasMes + ' d' : '30 d')) + '</div>';
-    html += '<div class="nota">Hoy ≈ ' + (vasos >= 1 ? vasos.toFixed(1) + ' vasos de agua' : agua(c.hoy.wh * f) + ' de agua') +
-      ' y ≈ ' + cargas.toFixed(1) + ' cargas de celular. Rango del agua: ' + agua(c.hoy.wh * 0.5) + ' a ' + agua(c.hoy.wh * 5) + '.</div>';
-    html += '<div class="nota">Estimación, no medición: Anthropic no publica energía ni agua por modelo. Energía con factores por token ' +
-      '(entrada 390, salida 1950, escritura 490 y lectura de caché 39 Wh por millón; S. Couch con datos de Epoch AI) y agua con ' +
-      f + ' mL por Wh (enfriamiento + generación eléctrica; ajustable en <code>koalaCientifico.aguaMlPorWh</code>).</div>';
-    return tarjeta('Huella estimada', html);
+      cifra(energia(c.hoy.wh), T('energía hoy')) +
+      cifra(agua(c.hoy.wh * f), T('agua hoy')) +
+      cifra(energia(c.mes.wh), T('energía {0}', periodo)) +
+      cifra(agua(c.mes.wh * f), T('agua {0}', periodo)) + '</div>';
+    html += '<div class="nota">' + T('Hoy ≈ {0} y ≈ {1} cargas de celular. Rango del agua: {2} a {3}.',
+      vasos >= 1 ? T('{0} vasos de agua', vasos.toFixed(1)) : T('{0} de agua', agua(c.hoy.wh * f)),
+      cargas.toFixed(1), agua(c.hoy.wh * 0.5), agua(c.hoy.wh * 5)) + '</div>';
+    html += '<div class="nota">' + T('Estimación, no medición: Anthropic no publica energía ni agua por modelo. Energía con factores por token (entrada 390, salida 1950, escritura 490 y lectura de caché 39 Wh por millón; S. Couch con datos de Epoch AI) y agua con {0} mL por Wh (enfriamiento + generación eléctrica; ajustable en <code>koalaCientifico.aguaMlPorWh</code>).', f) + '</div>';
+    return tarjeta(T('Huella estimada'), html);
   }
 
   // ---------- Alarmas (pestaña Mascota) ----------
@@ -224,11 +228,11 @@
     const lista = est.alarmas || [];
     pintar('alarmas-lista', lista.length ? lista.map((a) =>
       '<div class="alarma' + (a.activa ? '' : ' apagada') + '">' +
-      '<button data-alarma-alternar="' + esc(a.id) + '" title="' + (a.activa ? 'Apagar' : 'Encender') + '">' + (a.activa ? '⏰' : '💤') + '</button>' +
+      '<button data-alarma-alternar="' + esc(a.id) + '" title="' + (a.activa ? T('Apagar') : T('Encender')) + '">' + (a.activa ? '⏰' : '💤') + '</button>' +
       '<span class="hora">' + esc(a.hora) + '</span><span class="msg" title="' + esc(a.mensaje) + '">' + esc(a.mensaje) + '</span>' +
       '<span class="rep">' + esc(a.texto) + '</span>' +
-      '<button data-alarma-borrar="' + esc(a.id) + '" title="Borrar">×</button></div>').join('')
-      : '<div class="nota">Sin alarmas. Pon una hora y un mensaje: el koala te avisa con su despertador.</div>');
+      '<button data-alarma-borrar="' + esc(a.id) + '" title="' + T('Borrar') + '">×</button></div>').join('')
+      : '<div class="nota">' + T('Sin alarmas. Pon una hora y un mensaje: el koala te avisa con su despertador.') + '</div>');
   }
   const btnAlarma = $('alarma-agregar');
   if (btnAlarma) btnAlarma.addEventListener('click', () => {
@@ -244,40 +248,40 @@
   function pintarHoy() {
     const h = est.hoy || {};
     const p = est.pomodoro || {};
-    let html = tarjeta('Resumen del día', '<div class="cifras">' +
-      cifra(tokens(h.tokens || 0), 'tokens de Claude') +
-      cifra(String(h.mensajes || 0), 'respuestas') +
-      cifra(duracion(est.activoHoy || 0), 'activo en el editor') +
-      cifra(String(p.hoy || 0), 'pomodoros') + '</div>');
-    html += tarjeta('Por proyecto', ranking(h.proyectos, 5, tokens, ''));
-    html += tarjeta('Por modelo', ranking(h.modelos, 4, tokens, 'morado'));
-    html += tarjeta('Herramientas de Claude', ranking(h.herramientas, 6, (v) => v + '×', 'verde'));
+    let html = tarjeta(T('Resumen del día'), '<div class="cifras">' +
+      cifra(tokens(h.tokens || 0), T('tokens de Claude')) +
+      cifra(String(h.mensajes || 0), T('respuestas')) +
+      cifra(duracion(est.activoHoy || 0), T('activo en el editor')) +
+      cifra(String(p.hoy || 0), T('pomodoros')) + '</div>');
+    html += tarjeta(T('Por proyecto'), ranking(h.proyectos, 5, tokens, ''));
+    html += tarjeta(T('Por modelo'), ranking(h.modelos, 4, tokens, 'morado'));
+    html += tarjeta(T('Herramientas de Claude'), ranking(h.herramientas, 6, (v) => v + '×', 'verde'));
 
     // git
     const repos = est.git;
     let git;
-    if (!repos) git = '<div class="nota">La extensión de git de VS Code no está activa.</div>';
-    else if (!repos.length) git = '<div class="nota">No hay repositorios abiertos.</div>';
+    if (!repos) git = '<div class="nota">' + T('La extensión de git de VS Code no está activa.') + '</div>';
+    else if (!repos.length) git = '<div class="nota">' + T('No hay repositorios abiertos.') + '</div>';
     else {
-      git = repos.map((g) => '<div class="repo"><b>' + esc(g.nombre) + '</b> · ' + esc(g.rama || 'sin rama') + '<br>' +
-        (g.cambios ? g.cambios + ' cambio' + (g.cambios === 1 ? '' : 's') + ' sin commit' : 'sin cambios pendientes') +
-        ' · ' + g.commitsHoy + ' commit' + (g.commitsHoy === 1 ? '' : 's') + ' hoy' +
-        (g.porSubir ? ' · ' + g.porSubir + ' por subir' : '') +
-        (g.ultimoCommit ? ' · último ' + hace(g.ultimoCommit) : '') + '</div>').join('');
+      git = repos.map((g) => '<div class="repo"><b>' + esc(g.nombre) + '</b> · ' + esc(g.rama || T('sin rama')) + '<br>' +
+        (g.cambios === 1 ? T('1 cambio sin commit') : g.cambios ? T('{0} cambios sin commit', g.cambios) : T('sin cambios pendientes')) +
+        ' · ' + (g.commitsHoy === 1 ? T('1 commit hoy') : T('{0} commits hoy', g.commitsHoy)) +
+        (g.porSubir ? ' · ' + T('{0} por subir', g.porSubir) : '') +
+        (g.ultimoCommit ? ' · ' + T('último {0}', hace(g.ultimoCommit)) : '') + '</div>').join('');
     }
     const r = est.racha || {};
     if (r.dias) {
       const medalla = r.dias >= 14 ? '🥇' : r.dias >= 7 ? '🥈' : r.dias >= 3 ? '🥉' : '';
-      git += '<div class="repo">' + medalla + ' Racha de <b>' + r.dias + ' día' + (r.dias === 1 ? '' : 's') + '</b> con commits' +
-        (r.hoy ? '' : ' · haz uno hoy para no romperla') + '</div>';
+      git += '<div class="repo">' + medalla + ' ' + (r.dias === 1 ? T('Racha de <b>1 día</b> con commits') : T('Racha de <b>{0} días</b> con commits', r.dias)) +
+        (r.hoy ? '' : ' · ' + T('haz uno hoy para no romperla')) + '</div>';
     }
     html += tarjeta('Git', git);
 
     const d = est.diag || {};
-    html += tarjeta('Problemas del proyecto', '<div class="cifras">' +
-      cifra(String(d.errores || 0), 'errores') + cifra(String(d.avisos || 0), 'advertencias') +
-      cifra(String(d.archivos || 0), 'archivos') + '</div>' +
-      '<button class="boton-chico" data-cmd="workbench.actions.view.problems">Ver problemas</button>');
+    html += tarjeta(T('Problemas del proyecto'), '<div class="cifras">' +
+      cifra(String(d.errores || 0), T('errores')) + cifra(String(d.avisos || 0), T('advertencias')) +
+      cifra(String(d.archivos || 0), T('archivos')) + '</div>' +
+      '<button class="boton-chico" data-cmd="workbench.actions.view.problems">' + T('Ver problemas') + '</button>');
 
     // mapa de calor semanal
     const mapa = h.mapa || [];
@@ -294,51 +298,52 @@
       });
     });
     calor += '</div>';
-    html += tarjeta('Uso de Claude por hora (7 días)', calor);
+    html += tarjeta(T('Uso de Claude por hora (7 días)'), calor);
 
     // vitrina de logros
     const ru = est.rutina;
     if (ru) {
       const hechos = ru.logros.filter((l) => l.fecha).length;
-      html += tarjeta('Logros (' + hechos + ' de ' + ru.logros.length + ')', '<div class="logros">' +
+      html += tarjeta(T('Logros ({0} de {1})', hechos, ru.logros.length), '<div class="logros">' +
         ru.logros.map((l) => '<div class="logro' + (l.fecha ? '' : ' bloqueado') + '" title="' +
-          esc(l.nombre + ': ' + l.desc + (l.fecha ? ' · ' + new Date(l.fecha).toLocaleDateString('es-MX') : ' (pendiente)')) + '">' +
+          esc(l.nombre + ': ' + l.desc + (l.fecha ? ' · ' + new Date(l.fecha).toLocaleDateString(LOCALE) : ' ' + T('(pendiente)'))) + '">' +
           (l.fecha ? l.icono : '❔') + '</div>').join('') + '</div>' +
-        '<div class="nota">💧 Agua hoy: ' + ru.agua + ' de ' + ru.metaAgua + ' vasos' +
-        (ru.diasSinErrores >= 1 ? ' · ' + ru.diasSinErrores + ' día' + (ru.diasSinErrores === 1 ? '' : 's') + ' sin errores' : '') + '</div>');
+        '<div class="nota">💧 ' + T('Agua hoy: {0} de {1} vasos', ru.agua, ru.metaAgua) +
+        (ru.diasSinErrores === 1 ? ' · ' + T('1 día sin errores') : ru.diasSinErrores > 1 ? ' · ' + T('{0} días sin errores', ru.diasSinErrores) : '') + '</div>');
     }
     pintar('hoy', html);
   }
 
   // ---------- Sistema ----------
+  const NOMBRE_CLIMA = { despejado: 'despejado', nublado: 'nublado', niebla: 'niebla', lluvia: 'lluvia', tormenta: 'tormenta', nieve: 'nieve' };
   function pintarSistema() {
     const s = est.sistema;
     let html;
-    if (!s) html = tarjeta('Servidor', '<div class="nota">Midiendo…</div>');
+    if (!s) html = tarjeta(T('Servidor'), '<div class="nota">' + T('Midiendo…') + '</div>');
     else {
       const cpu = s.cpu;
-      html = tarjeta('Servidor · ' + s.host,
-        renglon('CPU (' + s.nucleos + ' núcleos)', pct(cpu), cpu || 0, nivel(cpu || 0, 70, 90), 'Carga 1 min: ' + s.carga.toFixed(2)) +
-        renglon('Memoria', bytes(s.memoria.usada) + ' / ' + bytes(s.memoria.total), s.memoria.pct, nivel(s.memoria.pct, 75, 90)) +
-        s.discos.map((d) => renglon('Disco ' + d.ruta, bytes(d.usada) + ' / ' + bytes(d.total), d.pct, nivel(d.pct, 80, 90))).join('') +
-        (s.temperatura != null ? renglon('Temperatura CPU', s.temperatura + ' °C', Math.min(100, (s.temperatura / 100) * 100), nivel(s.temperatura, 70, 85)) : '') +
-        '<div class="nota">Encendido hace ' + (s.encendido >= 172800 ? Math.floor(s.encendido / 86400) + ' días' : duracion(s.encendido)) + '</div>');
+      html = tarjeta(T('Servidor') + ' · ' + s.host,
+        renglon(T('CPU ({0} núcleos)', s.nucleos), pct(cpu), cpu || 0, nivel(cpu || 0, 70, 90), T('Carga 1 min: {0}', s.carga.toFixed(2))) +
+        renglon(T('Memoria'), bytes(s.memoria.usada) + ' / ' + bytes(s.memoria.total), s.memoria.pct, nivel(s.memoria.pct, 75, 90)) +
+        s.discos.map((d) => renglon(T('Disco {0}', d.ruta), bytes(d.usada) + ' / ' + bytes(d.total), d.pct, nivel(d.pct, 80, 90))).join('') +
+        (s.temperatura != null ? renglon(T('Temperatura CPU'), s.temperatura + ' °C', Math.min(100, (s.temperatura / 100) * 100), nivel(s.temperatura, 70, 85)) : '') +
+        '<div class="nota">' + T('Encendido hace {0}', s.encendido >= 172800 ? T('{0} días', Math.floor(s.encendido / 86400)) : duracion(s.encendido)) + '</div>');
     }
     const cl = est.clima;
     const ICONO_CLIMA = { despejado: '☀️', nublado: '⛅', niebla: '🌫️', lluvia: '🌧️', tormenta: '⛈️', nieve: '❄️' };
     const cuerpoClima = cl && !cl.error
-      ? '<div class="cifras">' + cifra(cl.temp + ' °C', cl.nombre || '') + cifra(ICONO_CLIMA[cl.tipo] || '·', cl.tipo) + '</div>' +
-        '<div class="nota">Open-Meteo · se ve en la ventana y el termómetro del laboratorio</div>'
+      ? '<div class="cifras">' + cifra(cl.temp + ' °C', cl.nombre || '') + cifra(ICONO_CLIMA[cl.tipo] || '·', T(NOMBRE_CLIMA[cl.tipo] || cl.tipo)) + '</div>' +
+        '<div class="nota">' + T('Open-Meteo · se ve en la ventana y el termómetro del laboratorio') + '</div>'
       : '<div class="nota">' + (cl && cl.error ? '⚠ ' + esc(cl.error) + '. ' : '') +
-        'Elige tu ciudad para ver el clima real en la ventana y el termómetro (necesita internet). El koala no detecta tu ubicación por su cuenta.</div>';
-    html += tarjeta('Clima', cuerpoClima +
-      '<button class="boton-chico" data-msg="elegirCiudad">' + (cl && !cl.error ? 'Cambiar ciudad' : 'Elegir ciudad') + '</button>');
+        T('Elige tu ciudad para ver el clima real en la ventana y el termómetro (necesita internet). El koala no detecta tu ubicación por su cuenta.') + '</div>';
+    html += tarjeta(T('Clima'), cuerpoClima +
+      '<button class="boton-chico" data-msg="elegirCiudad">' + (cl && !cl.error ? T('Cambiar ciudad') : T('Elegir ciudad')) + '</button>');
     const lista = est.servicios || [];
     const filas = lista.map((x) => '<div class="servicio" title="' + esc(x.url) + '"><span class="luz' + (x.ok ? '' : ' mal') + '"></span>' +
       '<span class="nom">' + esc(x.nombre) + '</span><span class="val">' + esc(x.ok ? (x.ms + ' ms') : x.detalle) + '</span>' +
-      '<button class="quitar" data-quitar="' + esc(x.url) + '" title="Dejar de vigilar">×</button></div>').join('');
-    html += tarjeta('Servicios', (filas || '<div class="nota">Agrega direcciones para que el koala las vigile cada minuto (por ejemplo tu runserver de Django).</div>') +
-      '<button class="boton-chico" id="btn-agregar-servicio">+ Vigilar un servicio</button>');
+      '<button class="quitar" data-quitar="' + esc(x.url) + '" title="' + T('Dejar de vigilar') + '">×</button></div>').join('');
+    html += tarjeta(T('Servicios'), (filas || '<div class="nota">' + T('Agrega direcciones para que el koala las vigile cada minuto (por ejemplo tu runserver de Django).') + '</div>') +
+      '<button class="boton-chico" id="btn-agregar-servicio">' + T('+ Vigilar un servicio') + '</button>');
     pintar('sistema', html);
   }
 

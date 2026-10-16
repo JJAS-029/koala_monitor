@@ -120,6 +120,14 @@ function crearEntorno(semilla, opciones = {}) {
     addEventListener: (t, fn) => { if (t === 'message') oyentes.push(fn); },
   };
   sandbox.window = sandbox;
+  if (opciones.idioma === 'en') {
+    // lo mismo que inyecta vista.js en el webview
+    sandbox.KOALA_DIC = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'l10n', 'en.json'), 'utf8'));
+    sandbox.koalaT = function (s) {
+      const a = arguments, x = sandbox.KOALA_DIC[s] !== undefined ? sandbox.KOALA_DIC[s] : s;
+      return x.replace(/\{(\d+)\}/g, (m, i) => (a[+i + 1] === undefined ? m : String(a[+i + 1])));
+    };
+  }
   const contexto = vm.createContext(sandbox);
   let s = semilla >>> 0;
   sandbox.__azar = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
@@ -621,6 +629,19 @@ escena('32-alarma', 71, (e, tomar) => {
   verificar(visto, 'deja la laptop y suena el despertador con el mensaje');
   e.avanzar(4);
   verificar(e.koala.k.modo === 'trabajo', 'después vuelve a trabajar');
+});
+
+escena('33-en-ingles', 81, (e0, tomar) => {
+  const e = crearEntorno(81, { idioma: 'en' });
+  e.enviar(estado());
+  e.enviar({ tipo: 'accion', accion: 'buenosDias', datos: { semana: 34, racha: 5, cambios: 1 } });
+  const textos = new Set();
+  for (let i = 0; i < 35; i++) { e.avanzar(0.6); textos.add(e.elementos['estado'].textContent); }
+  verificar([...textos].some((t) => /Good morning!/.test(t)), 'el koala habla inglés: Good morning!');
+  verificar([...textos].some((t) => /used 34% of your Claude week/.test(t)), 'resumen traducido con su cifra');
+  verificar([...textos].some((t) => /1 change was left uncommitted/.test(t)), 'singular bien traducido');
+  verificar(![...textos].some((t) => /¡|Llevas|Quedó/.test(t)), 'sin restos en español');
+  tomar();
 });
 
 if (errores.length) {

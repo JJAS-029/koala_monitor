@@ -167,8 +167,14 @@ Saciedad, ánimo y energía (se guardan entre sesiones). Comer (eucalipto), juga
 mimar (o clic sobre él) y dormir. Si le pides algo mientras trabaja, guarda la laptop,
 lo hace y vuelve a trabajar.
 
+## Idioma / Language
+El koala habla español o inglés según el idioma de VS Code. Para fijarlo, usa `koalaCientifico.idioma`
+(`auto`, `es` o `en`).
+*The koala speaks English when VS Code's display language isn't Spanish; set `koalaCientifico.idioma` to `en`
+to force it.*
+
 ## Ajustes
-`koalaCientifico.segundosParaDescansar`, `koalaCientifico.reaccionarAClaude`,
+`koalaCientifico.idioma`, `koalaCientifico.segundosParaDescansar`, `koalaCientifico.reaccionarAClaude`,
 `koalaCientifico.avisarEnPorcentaje`, `koalaCientifico.barraDeEstado`.
 
 ## Instalar

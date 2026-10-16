@@ -1,8 +1,8 @@
 {
   "name": "koala-cientifico",
-  "displayName": "Koala científico",
-  "description": "Mascota koala de laboratorio que trabaja contigo y mide tu uso de Claude Code: límites de sesión y semana, ritmo, costo equivalente, pomodoro, git y servidor.",
-  "version": "1.3.0",
+  "displayName": "%nombre%",
+  "description": "%descripcion%",
+  "version": "1.4.0",
   "publisher": "jjas-029",
   "license": "MIT",
   "icon": "media/icono.png",
@@ -50,165 +50,196 @@
         {
           "type": "webview",
           "id": "koalaCientifico.panel",
-          "name": "Koala científico"
+          "name": "%vista%"
         }
       ]
     },
     "commands": [
       {
         "command": "koalaCientifico.mostrar",
-        "title": "Koala científico: mostrar panel"
+        "title": "%cmd.mostrar%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.comer",
-        "title": "Koala científico: dar de comer"
+        "title": "%cmd.comer%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.jugar",
-        "title": "Koala científico: jugar"
+        "title": "%cmd.jugar%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.mimar",
-        "title": "Koala científico: mimar"
+        "title": "%cmd.mimar%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.dormir",
-        "title": "Koala científico: dormir / despertar"
+        "title": "%cmd.dormir%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.trabajar",
-        "title": "Koala científico: trabajar / descansar"
+        "title": "%cmd.trabajar%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.consumo",
-        "title": "Koala científico: ver consumo de Claude"
+        "title": "%cmd.consumo%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.configurar",
-        "title": "Koala científico: configurar monitor de Claude Code"
+        "title": "%cmd.configurar%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.pomodoro",
-        "title": "Koala científico: iniciar / pausar pomodoro"
+        "title": "%cmd.pomodoro%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.pomodoroDetener",
-        "title": "Koala científico: detener pomodoro"
+        "title": "%cmd.pomodoroDetener%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.agregarServicio",
-        "title": "Koala científico: vigilar un servicio (URL)"
+        "title": "%cmd.agregarServicio%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.consultarAnthropic",
-        "title": "Koala científico: consultar uso real en Anthropic"
+        "title": "%cmd.consultarAnthropic%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.agua",
-        "title": "Koala científico: tomé un vaso de agua"
+        "title": "%cmd.agua%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.elegirCiudad",
-        "title": "Koala científico: elegir ciudad del clima"
+        "title": "%cmd.elegirCiudad%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.nuevaAlarma",
-        "title": "Koala científico: nueva alarma"
+        "title": "%cmd.nuevaAlarma%",
+        "category": "%categoria%"
       },
       {
         "command": "koalaCientifico.alarmas",
-        "title": "Koala científico: ver alarmas"
+        "title": "%cmd.alarmas%",
+        "category": "%categoria%"
       }
     ],
     "configuration": {
-      "title": "Koala científico",
+      "title": "%ajustes%",
       "properties": {
+        "koalaCientifico.idioma": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "es",
+            "en"
+          ],
+          "enumDescriptions": [
+            "%cfg.idioma.0%",
+            "%cfg.idioma.1%",
+            "%cfg.idioma.2%"
+          ],
+          "description": "%cfg.idioma%"
+        },
         "koalaCientifico.segundosParaDescansar": {
           "type": "number",
           "default": 10,
           "minimum": 2,
-          "description": "Segundos sin actividad en el editor o la terminal para que el koala deje de trabajar."
+          "description": "%cfg.segundosParaDescansar%"
         },
         "koalaCientifico.reaccionarAClaude": {
           "type": "boolean",
           "default": true,
-          "description": "El koala trabaja mientras Claude Code está en un turno (requiere los hooks del monitor)."
+          "description": "%cfg.reaccionarAClaude%"
         },
         "koalaCientifico.avisarEnPorcentaje": {
           "type": "number",
           "default": 90,
           "minimum": 50,
           "maximum": 100,
-          "description": "Porcentaje de uso (sesión o semana) a partir del cual el koala te avisa con una notificación."
+          "description": "%cfg.avisarEnPorcentaje%"
         },
         "koalaCientifico.pomodoro.minutosEnfoque": {
           "type": "number",
           "default": 25,
           "minimum": 1,
           "maximum": 120,
-          "description": "Minutos de cada experimento (bloque de enfoque) del pomodoro."
+          "description": "%cfg.pomodoro.minutosEnfoque%"
         },
         "koalaCientifico.pomodoro.minutosDescanso": {
           "type": "number",
           "default": 5,
           "minimum": 1,
           "maximum": 60,
-          "description": "Minutos del descanso corto."
+          "description": "%cfg.pomodoro.minutosDescanso%"
         },
         "koalaCientifico.pomodoro.minutosDescansoLargo": {
           "type": "number",
           "default": 15,
           "minimum": 1,
           "maximum": 90,
-          "description": "Minutos del descanso largo."
+          "description": "%cfg.pomodoro.minutosDescansoLargo%"
         },
         "koalaCientifico.pomodoro.antesDeDescansoLargo": {
           "type": "number",
           "default": 4,
           "minimum": 1,
           "maximum": 12,
-          "description": "Pomodoros antes de un descanso largo."
+          "description": "%cfg.pomodoro.antesDeDescansoLargo%"
         },
         "koalaCientifico.usoDesdeAnthropic": {
           "type": "boolean",
           "default": false,
-          "description": "Consultar el % real de sesión y semana en api.anthropic.com con la sesión de Claude Code guardada en este equipo (~/.claude/.credentials.json). El token solo se envía a Anthropic."
+          "description": "%cfg.usoDesdeAnthropic%"
         },
         "koalaCientifico.minutosEntreConsultas": {
           "type": "number",
           "default": 5,
           "minimum": 2,
           "maximum": 60,
-          "description": "Minutos entre consultas a Anthropic."
+          "description": "%cfg.minutosEntreConsultas%"
         },
         "koalaCientifico.aguaMlPorWh": {
           "type": "number",
           "default": 2,
           "minimum": 0,
           "maximum": 15,
-          "description": "Mililitros de agua por Wh para la huella estimada (enfriamiento + generación eléctrica). Referencias: ~0.5 centro de datos eficiente; ~2 promedio citado; hasta 12 en sitios secos."
+          "description": "%cfg.aguaMlPorWh%"
         },
         "koalaCientifico.costoPlanMensualUSD": {
           "type": "number",
           "default": 0,
           "minimum": 0,
-          "description": "Lo que pagas al mes por tu plan de Claude (USD), para compararlo con el costo equivalente en la API. 0 = no comparar."
+          "description": "%cfg.costoPlanMensualUSD%"
         },
         "koalaCientifico.avisarCuandoClaudeEspera": {
           "type": "boolean",
           "default": true,
-          "description": "Notificación cuando Claude Code espera tu permiso o una respuesta (además de la mano levantada del koala)."
+          "description": "%cfg.avisarCuandoClaudeEspera%"
         },
         "koalaCientifico.avisarTurnoLargoSegundos": {
           "type": "number",
           "default": 120,
           "minimum": 0,
-          "description": "Si un turno de Claude dura al menos estos segundos, el koala te avisa al terminar (notificación solo si VS Code no tiene el foco). 0 = nunca."
+          "description": "%cfg.avisarTurnoLargoSegundos%"
         },
         "koalaCientifico.reaccionarAComandos": {
           "type": "boolean",
           "default": true,
-          "description": "Reaccionar al terminar pruebas, builds, migraciones o comandos de 15 s o más en la terminal (requiere la integración de shell de VS Code)."
+          "description": "%cfg.reaccionarAComandos%"
         },
         "koalaCientifico.temporada": {
           "type": "string",
@@ -232,69 +263,69 @@
             "ninguna"
           ],
           "enumDescriptions": [
-            "Según la fecha",
-            "Día de Muertos (28 oct.–2 nov.)",
-            "Navidad (12 dic.–6 ene.)",
-            "Fiestas patrias (13–16 sep.)",
-            "Año nuevo (31 dic. y 1 ene.)",
-            "Día de Reyes (6 ene.): rosca",
-            "Día de la Marmota y la Candelaria (2 feb.): tamales",
-            "San Valentín (14 feb.)",
-            "Día de Pi (14 mar.)",
-            "Primavera (20–21 mar.)",
-            "Día del Niño (30 abr.)",
-            "Día de las Madres (10 may.)",
-            "Día del Programador (día 256 del año)",
-            "Día de la Nación Pluricultural (12 oct.)",
-            "Tu cumpleaños (koalaCientifico.cumpleanos)",
-            "Sin disfraces"
+            "%cfg.temporada.0%",
+            "%cfg.temporada.1%",
+            "%cfg.temporada.2%",
+            "%cfg.temporada.3%",
+            "%cfg.temporada.4%",
+            "%cfg.temporada.5%",
+            "%cfg.temporada.6%",
+            "%cfg.temporada.7%",
+            "%cfg.temporada.8%",
+            "%cfg.temporada.9%",
+            "%cfg.temporada.10%",
+            "%cfg.temporada.11%",
+            "%cfg.temporada.12%",
+            "%cfg.temporada.13%",
+            "%cfg.temporada.14%",
+            "%cfg.temporada.15%"
           ],
-          "description": "Disfraz de temporada del koala."
+          "description": "%cfg.temporada%"
         },
         "koalaCientifico.minutosParaSiesta": {
           "type": "number",
           "default": 20,
           "minimum": 0,
-          "description": "Minutos sin actividad (editor, terminal ni Claude) para que el koala se duerma sobre la laptop. 0 = nunca."
+          "description": "%cfg.minutosParaSiesta%"
         },
         "koalaCientifico.cumpleanos": {
           "type": "string",
           "default": "",
           "pattern": "^$|^\\d{1,2}[/-]\\d{1,2}$",
-          "description": "Tu cumpleaños como DD/MM (p. ej. 29/03): ese día el koala tiene pastel y gorro de fiesta."
+          "description": "%cfg.cumpleanos%"
         },
         "koalaCientifico.clima.ciudad": {
           "type": "string",
           "default": "",
-          "description": "Ciudad del clima en la ventana del laboratorio. Mejor usa el comando «Koala científico: elegir ciudad del clima» (te deja escoger entre ciudades con el mismo nombre). Vacío = sin clima. Usa Open-Meteo (gratis, sin cuenta; necesita internet). El koala no detecta tu ubicación por su cuenta."
+          "description": "%cfg.clima.ciudad%"
         },
         "koalaCientifico.metaAgua": {
           "type": "number",
           "default": 8,
           "minimum": 1,
           "maximum": 20,
-          "description": "Vasos de agua al día (botón 💧 en la pestaña Mascota)."
+          "description": "%cfg.metaAgua%"
         },
         "koalaCientifico.minutosPausaActiva": {
           "type": "number",
           "default": 90,
           "minimum": 0,
-          "description": "Minutos seguidos de actividad para que el koala te invite a estirarte. 0 = nunca."
+          "description": "%cfg.minutosPausaActiva%"
         },
         "koalaCientifico.visitantes": {
           "type": "boolean",
           "default": true,
-          "description": "De vez en cuando pasa un panda, un ajolote o un tlacuache a saludar."
+          "description": "%cfg.visitantes%"
         },
         "koalaCientifico.sonidos": {
           "type": "boolean",
           "default": false,
-          "description": "Sonidos cortos al terminar Claude o un pomodoro, al festejar un commit y al desbloquear un logro."
+          "description": "%cfg.sonidos%"
         },
         "koalaCientifico.servicios": {
           "type": "array",
           "default": [],
-          "description": "Servicios que el koala vigila cada minuto (responde = verde). Ejemplo: { \"nombre\": \"Django\", \"url\": \"http://127.0.0.1:8000/\" }.",
+          "description": "%cfg.servicios%",
           "items": {
             "type": "object",
             "properties": {
@@ -313,7 +344,7 @@
         "koalaCientifico.barraDeEstado": {
           "type": "boolean",
           "default": true,
-          "description": "Mostrar el consumo de Claude Code en la barra de estado de VS Code."
+          "description": "%cfg.barraDeEstado%"
         }
       }
     }

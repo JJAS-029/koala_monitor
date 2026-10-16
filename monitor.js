@@ -7,6 +7,7 @@ const os = require('os');
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
+const { t } = require('./idioma');
 
 // ---------- Servidor ----------
 let cpuPrevio = null;
@@ -81,8 +82,8 @@ function pedirJson(url) {
   });
 }
 // Ciudades que coinciden con un texto (para que el usuario elija la suya).
-async function buscarCiudades(texto) {
-  const g = await pedirJson(`https://geocoding-api.open-meteo.com/v1/search?count=8&language=es&name=${encodeURIComponent(String(texto).trim())}`);
+async function buscarCiudades(texto, lang = 'es') {
+  const g = await pedirJson(`https://geocoding-api.open-meteo.com/v1/search?count=8&language=${lang}&name=${encodeURIComponent(String(texto).trim())}`);
   return ((g && g.results) || []).map((r) => ({
     nombre: r.name, region: [r.admin1, r.country].filter(Boolean).join(', '), lat: r.latitude, lon: r.longitude,
   }));
@@ -103,7 +104,7 @@ async function clima(lugar) {
     const region = resto.join(' ').toLowerCase();
     let opciones = await buscarCiudades(nombre);
     if (!opciones.length) opciones = await buscarCiudades(nombre); // un reintento: la red a veces falla
-    if (!opciones.length) return { error: `No encontré "${nombre}"`, reintentar: true };
+    if (!opciones.length) return { error: t('No encontré "{0}"', nombre), reintentar: true };
     const r = (region && opciones.find((o) => region.includes((o.region.split(',')[0] || '').toLowerCase()))) || opciones[0];
     lugarClima = { ciudad, lat: r.lat, lon: r.lon, nombre: r.nombre };
   }
@@ -113,7 +114,7 @@ async function clima(lugar) {
     d = await pedirJson(`https://api.open-meteo.com/v1/forecast?latitude=${lugarClima.lat}&longitude=${lugarClima.lon}` +
       '&current=temperature_2m,weather_code,is_day,precipitation&timezone=auto');
   }
-  if (!d || !d.current) return { error: 'Sin respuesta del servicio del clima', nombre: lugarClima.nombre, reintentar: true };
+  if (!d || !d.current) return { error: t('Sin respuesta del servicio del clima'), nombre: lugarClima.nombre, reintentar: true };
   const c = d.current.weather_code;
   // Códigos WMO: 0 despejado, 1–3 nubes, 45–48 niebla, 51–67 y 80–82 lluvia, 71–77 y 85–86 nieve, 95–99 tormenta.
   const tipo = c >= 95 ? 'tormenta' : (c >= 71 && c <= 77) || c === 85 || c === 86 ? 'nieve'
@@ -152,7 +153,7 @@ function sondear(url, ms) {
     try {
       mod = new URL(url).protocol === 'https:' ? https : http;
     } catch (e) {
-      resolver({ ok: false, detalle: 'dirección inválida' });
+      resolver({ ok: false, detalle: t('dirección inválida') });
       return;
     }
     const req = mod.get(url, { timeout: ms, rejectUnauthorized: false }, (res) => {
@@ -160,8 +161,8 @@ function sondear(url, ms) {
       const ok = res.statusCode < 500;
       resolver({ ok, codigo: res.statusCode, ms: Date.now() - inicio, detalle: ok ? `${res.statusCode}` : `error ${res.statusCode}` });
     });
-    req.on('timeout', () => { req.destroy(); resolver({ ok: false, detalle: 'no responde' }); });
-    req.on('error', (e) => resolver({ ok: false, detalle: e.code === 'ECONNREFUSED' ? 'apagado' : (e.code || 'error') }));
+    req.on('timeout', () => { req.destroy(); resolver({ ok: false, detalle: t('no responde') }); });
+    req.on('error', (e) => resolver({ ok: false, detalle: e.code === 'ECONNREFUSED' ? t('apagado') : (e.code || 'error') }));
   });
 }
 

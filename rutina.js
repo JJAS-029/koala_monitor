@@ -2,6 +2,8 @@
 // Rutina del día del koala: buenos días, comida, pausas activas, despedida, agua, logros y ánimo del código.
 // Todo se guarda en globalState; los logros y contadores viajan con Settings Sync.
 
+const { t } = require('./idioma');
+
 const LOGROS = [
   { id: 'primer_pomodoro', icono: '🧪', nombre: 'Primer experimento', desc: 'Completa tu primer pomodoro' },
   { id: 'diez_pomodoros', icono: '⚗️', nombre: 'Laboratorio a todo vapor', desc: '10 pomodoros en un día' },
@@ -45,8 +47,8 @@ function crearRutina({ contexto, animar, notificar, config }) {
     if (!l) return;
     logros[id] = Date.now();
     guardar();
-    notificar(`🏅 Logro desbloqueado: ${l.icono} ${l.nombre}. ${l.desc}.`);
-    animar('logro', { nombre: l.nombre, icono: l.icono });
+    notificar('🏅 ' + t('Logro desbloqueado: {0} {1}. {2}.', l.icono, t(l.nombre), t(l.desc)));
+    animar('logro', { nombre: t(l.nombre), icono: l.icono });
   }
 
   // Se llama cada 15 s. c = { inactivoMin, visible, resumen }
@@ -120,7 +122,7 @@ function crearRutina({ contexto, animar, notificar, config }) {
         agua: dia.agua,
         metaAgua: config().get('metaAgua', 8),
         diasSinErrores: Math.floor((Date.now() - ultimoError) / 86400000),
-        logros: LOGROS.map((l) => ({ ...l, fecha: logros[l.id] || null })),
+        logros: LOGROS.map((l) => ({ ...l, nombre: t(l.nombre), desc: t(l.desc), fecha: logros[l.id] || null })),
         contadores: cont,
       };
     },

@@ -4,6 +4,11 @@
   'use strict';
 
   const vscode = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : { postMessage() {} };
+  // Textos: T('texto en español', ...) usa el diccionario que inyecta la extensión (window.koalaT).
+  const T = window.koalaT || function (s) {
+    const a = arguments;
+    return String(s).replace(/\{(\d+)\}/g, (m, i) => (a[+i + 1] === undefined ? m : String(a[+i + 1])));
+  };
   window.koalaVscode = vscode; // panel.js usa el mismo canal (acquireVsCodeApi solo se puede llamar una vez)
   const lienzo = document.getElementById('lienzo');
   const ctx = lienzo.getContext('2d');
@@ -118,7 +123,7 @@
   const cambiosPendientes = () => (est.git || []).reduce((n, g) => n + (g.cambios || 0), 0);
   const nervioso = () => cambiosPendientes() >= 20;
   const lloviendo = () => !!(est.clima && (est.clima.tipo === 'lluvia' || est.clima.tipo === 'tormenta'));
-  const NOMBRE_CLIMA = { despejado: 'despejado', nublado: 'nublado', niebla: 'con niebla', lluvia: 'lloviendo', tormenta: 'con tormenta', nieve: 'nevando' };
+  const NOMBRE_CLIMA = { despejado: 'despejado', nublado: 'nublado', niebla: 'con niebla', lluvia: 'lloviendo', tormenta: 'con tormenta', nieve: 'nevando' }; // se traducen con T()
 
   // ---------- Motor de pasos ----------
   // Un paso = { d: segundos, ini(), act(p, dt, t), hasta(), fin(), libre: interrumpible }
@@ -228,7 +233,7 @@
     if (a === 'jugar') return jugar();
     if (a === 'mimar') return mimar();
     if (a === 'festejar') return bailar(true);
-    if (a === 'festejarPomodoro') { sonar('pomodoro'); return bailar(true, '¡Experimento terminado! Hora de descansar'); }
+    if (a === 'festejarPomodoro') { sonar('pomodoro'); return bailar(true, T('¡Experimento terminado! Hora de descansar')); }
     if (a === 'buenosDias') return buenosDias(datosAccion.buenosDias || {});
     if (a === 'despedida') return despedida(datosAccion.despedida || {});
     if (a === 'lonche') return lonche();
@@ -240,7 +245,7 @@
     if (a === 'pedirAtencion') return saltar();
     if (a === 'errores0') return barrer(datosAccion.errores0 || {});
     if (a === 'servicioCaido') return apagarFuego(datosAccion.servicioCaido || {});
-    if (a === 'servicioVuelve') return aplaudir('✓ ' + ((datosAccion.servicioVuelve || {}).nombre || 'El servicio') + ' volvió a responder');
+    if (a === 'servicioVuelve') return aplaudir('✓ ' + T('{0} volvió a responder', (datosAccion.servicioVuelve || {}).nombre || T('El servicio')));
     if (a === 'claudeListo') return claudeListo(datosAccion.claudeListo || {});
     if (a === 'comandoOk') return comandoOk(datosAccion.comandoOk || {});
     if (a === 'comandoFallo') return comandoFallo(datosAccion.comandoFallo || {});
@@ -254,7 +259,7 @@
     const xMax = W - 14 * C, xMin = 7 * C;
     if (k.x > xMax || k.x < xMin) cola.push(caminarA(Math.max(xMin, xMax > xMin ? Math.min(k.x, xMax) : xMin)));
     cola.push(
-      esperar(0.45, { ini() { posturaBase(); k.mirar = 0; k.ojos = 'guino'; k.brazos = 'atras'; k.texto = 'Saca su laptop…'; } }),
+      esperar(0.45, { ini() { posturaBase(); k.mirar = 0; k.ojos = 'guino'; k.brazos = 'atras'; k.texto = T('Saca su laptop…'); } }),
       esperar(0.5, {
         ini() { k.ojos = null; k.brazos = 'arriba-der'; k.laptop = { x: 1.5, y: -7, abierta: false }; },
         act(p) { const q = suave(p); k.laptop.x = mezcla(1.5, 2.5, q); k.laptop.y = mezcla(-7, -11.5, q); },
@@ -274,7 +279,7 @@
 
   function guardarLaptop() {
     cola.push(
-      esperar(0.3, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.laptop.abierta = false; k.texto = 'Guarda la laptop…'; } }),
+      esperar(0.3, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.laptop.abierta = false; k.texto = T('Guarda la laptop…'); } }),
       esperar(0.3, { ini() { ponerPose('aplastado'); k.brazos = 'normal'; k.mirar = 0; } }),
       esperar(0.4, {
         ini() { ponerPose('frente'); k.brazos = 'lado'; },
@@ -296,7 +301,7 @@
     cola.push(esperar(1, {
       libre: true,
       ini() {
-        k.texto = est.claude ? 'Claude está trabajando: el koala toma notas' : 'Trabajando contigo';
+        k.texto = est.claude ? T('Claude está trabajando: el koala toma notas') : T('Trabajando contigo');
         const u = usoMaximo();
         const al = alertaMayor();
         k.sudor = u >= 75 || !!(al && al.nivel >= 2);
@@ -322,7 +327,7 @@
     const xMax = W - 14 * C, xMin = 7 * C;
     if (k.x > xMax || k.x < xMin) cola.push(caminarA(Math.max(xMin, xMax > xMin ? Math.min(k.x, xMax) : xMin)));
     cola.push(
-      esperar(0.4, { ini() { posturaBase(); k.mirar = 1; k.ojos = 'guino'; k.texto = 'Prepara un experimento…'; } }),
+      esperar(0.4, { ini() { posturaBase(); k.mirar = 1; k.ojos = 'guino'; k.texto = T('Prepara un experimento…'); } }),
       esperar(0.4, {
         ini() {
           ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'felices';
@@ -337,7 +342,7 @@
   function recogerExperimento() {
     cola.push(
       esperar(0.4, {
-        ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.texto = 'Recoge el laboratorio…'; puf(k.x + 9 * C, suelo - 3 * C); },
+        ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.texto = T('Recoge el laboratorio…'); puf(k.x + 9 * C, suelo - 3 * C); },
         fin() { k.exp = null; },
       }),
       esperar(0.2, { ini() { ponerPose('aplastado'); k.brazos = 'normal'; } }),
@@ -351,7 +356,7 @@
     cola.push(esperar(1.4, {
       libre: true,
       ini() {
-        k.texto = pausado ? 'Experimento en pausa' : 'Experimentando: concéntrate';
+        k.texto = pausado ? T('Experimento en pausa') : T('Experimentando: concéntrate');
         k.ojos = null; k.brazoY = 0; k.exp.tubo = tipo === 'verter';
         k.mirar = 1;
       },
@@ -415,19 +420,19 @@
   // ---------- Sueño ----------
   function dormirse() {
     cola.push(
-      esperar(0.5, { ini() { posturaBase(); k.ojos = 'cerrados'; k.texto = 'Bosteza…'; ponerPose('estirado'); k.brazos = 'arriba'; } }),
+      esperar(0.5, { ini() { posturaBase(); k.ojos = 'cerrados'; k.texto = T('Bosteza…'); ponerPose('estirado'); k.brazos = 'arriba'; } }),
       esperar(0.3, { ini() { ponerPose('aplastado'); k.brazos = 'normal'; k.modo = 'dormido'; } })
     );
   }
   function seguirDormido() {
     cola.push(esperar(1.2, {
       libre: true,
-      ini() { ponerPose('aplastado'); k.ojos = 'cerrados'; k.texto = 'Durmiendo… zzz'; zeta(); },
+      ini() { ponerPose('aplastado'); k.ojos = 'cerrados'; k.texto = T('Durmiendo… zzz'); zeta(); },
     }));
   }
   function despertar() {
     cola.push(
-      esperar(0.4, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'abiertos'; k.texto = '¡Despierta!'; } }),
+      esperar(0.4, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'abiertos'; k.texto = T('¡Despierta!'); } }),
       esperar(0.3, { ini() { posturaBase(); k.modo = 'libre'; } })
     );
   }
@@ -458,28 +463,28 @@
     const al = alertaMayor();
     if (al && al.nivel >= 2) return al.texto;
     const corte = minutosAlCorte();
-    if (corte !== null) return '⏳ Corte de la sesión en ' + corte + ' min';
+    if (corte !== null) return '⏳ ' + T('Corte de la sesión en {0} min', corte);
     const temp = est.sistema && est.sistema.temperatura;
-    if (temp >= 80) return '🔥 El servidor está a ' + temp + ' °C';
-    if (nervioso()) return '😬 Muchos cambios sin commit (' + cambiosPendientes() + ')…';
+    if (temp >= 80) return '🔥 ' + T('El servidor está a {0} °C', temp);
+    if (nervioso()) return '😬 ' + T('Muchos cambios sin commit ({0})…', cambiosPendientes());
     const r0 = est.rutina;
-    if (r0 && r0.diasSinErrores >= 2 && (k.t % 30) < 10) return '✨ ' + r0.diasSinErrores + ' días sin errores en el proyecto';
+    if (r0 && r0.diasSinErrores >= 2 && (k.t % 30) < 10) return '✨ ' + T('{0} días sin errores en el proyecto', r0.diasSinErrores);
     const cl = est.clima;
-    if (cl && cl.temp != null && (k.t % 45) < 12) return 'Afuera: ' + cl.temp + ' °C, ' + NOMBRE_CLIMA[cl.tipo] + (cl.nombre ? ' en ' + cl.nombre : '');
+    if (cl && cl.temp != null && (k.t % 45) < 12) return cl.nombre ? T('Afuera: {0} °C, {1} en {2}', cl.temp, T(NOMBRE_CLIMA[cl.tipo]), cl.nombre) : T('Afuera: {0} °C, {1}', cl.temp, T(NOMBRE_CLIMA[cl.tipo]));
     const r = est.racha && est.racha.dias;
-    if (r >= 3 && !est.racha.hoy && ahoraLocal().getHours() >= 17) return '🏅 Racha de ' + r + ' días: ¡no la rompas hoy!';
-    if (usoMaximo() >= est.umbral) return '¡Casi al límite de Claude Code!';
-    if (est.pomodoro && est.pomodoro.fase && est.pomodoro.fase !== 'enfoque') return 'Descanso del pomodoro: estírate tú también';
-    if (n.energia < 30 && est.energiaLigada) return 'Sin energía: la sesión de Claude se recarga ' + horaReinicio();
-    if (n.energia < 30) return 'Tiene sueño';
-    if (n.saciedad < 35) return 'Tiene hambre: quiere eucalipto';
-    if (n.animo < 35) return 'Está aburrido: quiere jugar';
-    if (usoMaximo() >= 75) return 'Revisa tus mediciones con cuidado';
+    if (r >= 3 && !est.racha.hoy && ahoraLocal().getHours() >= 17) return '🏅 ' + T('Racha de {0} días: ¡no la rompas hoy!', r);
+    if (usoMaximo() >= est.umbral) return T('¡Casi al límite de Claude Code!');
+    if (est.pomodoro && est.pomodoro.fase && est.pomodoro.fase !== 'enfoque') return T('Descanso del pomodoro: estírate tú también');
+    if (n.energia < 30 && est.energiaLigada) return T('Sin energía: la sesión de Claude se recarga {0}', horaReinicio());
+    if (n.energia < 30) return T('Tiene sueño');
+    if (n.saciedad < 35) return T('Tiene hambre: quiere eucalipto');
+    if (n.animo < 35) return T('Está aburrido: quiere jugar');
+    if (usoMaximo() >= 75) return T('Revisa tus mediciones con cuidado');
     const fecha = TEXTO_TEMPORADA[est.temporada];
-    if (fecha && (k.t % 40) < 20) return fecha;
-    if (ahoraLocal().getDay() === 5 && ahoraLocal().getHours() >= 16) return '¡Viernes por la tarde! 🎶';
-    if (momentoDelDia() === 'noche') return 'Trabajando de noche… no te desveles';
-    return 'Paseando por el laboratorio';
+    if (fecha && (k.t % 40) < 20) return T(fecha);
+    if (ahoraLocal().getDay() === 5 && ahoraLocal().getHours() >= 16) return T('¡Viernes por la tarde! 🎶');
+    if (momentoDelDia() === 'noche') return T('Trabajando de noche… no te desveles');
+    return T('Paseando por el laboratorio');
   }
 
   const TEXTO_TEMPORADA = {
@@ -612,14 +617,14 @@
   // ---------- Rutina del día ----------
   function buenosDias(d) {
     const ideas = [];
-    if (d.semana != null) ideas.push('Llevas ' + d.semana + ' % de tu semana de Claude');
-    if (d.racha) ideas.push('Racha de ' + d.racha + ' día' + (d.racha === 1 ? '' : 's') + ' con commits 🏅');
-    if (d.cambios) ideas.push('Quedaron ' + d.cambios + ' cambio' + (d.cambios === 1 ? '' : 's') + ' sin commit');
-    if (!ideas.length) ideas.push('¡A darle!');
+    if (d.semana != null) ideas.push(T('Llevas {0} % de tu semana de Claude', d.semana));
+    if (d.racha) ideas.push(d.racha === 1 ? T('Racha de 1 día con commits 🏅') : T('Racha de {0} días con commits 🏅', d.racha));
+    if (d.cambios) ideas.push(d.cambios === 1 ? T('Quedó 1 cambio sin commit') : T('Quedaron {0} cambios sin commit', d.cambios));
+    if (!ideas.length) ideas.push(T('¡A darle!'));
     cola.push(
-      esperar(0.01, { ini() { posturaBase(); k.x = -6 * C; k.texto = '☀️ ¡Buenos días!'; } }),
+      esperar(0.01, { ini() { posturaBase(); k.x = -6 * C; k.texto = '☀️ ' + T('¡Buenos días!'); } }),
       caminarA(W * 0.42, false, 45),
-      esperar(0.9, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'cerrados'; k.boca = true; k.texto = '*bostezo*'; }, fin() { k.boca = false; } }),
+      esperar(0.9, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'cerrados'; k.boca = true; k.texto = T('*bostezo*'); }, fin() { k.boca = false; } }),
       esperar(0.3, { ini() { posturaBase(); } })
     );
     tomarCafe();
@@ -627,39 +632,39 @@
   }
   function despedida(d) {
     const partes = [];
-    if (d.commitsHoy) partes.push(d.commitsHoy + ' commit' + (d.commitsHoy === 1 ? '' : 's'));
-    if (d.pomodoros) partes.push(d.pomodoros + ' pomodoro' + (d.pomodoros === 1 ? '' : 's'));
-    if (d.activo) partes.push(Math.floor(d.activo / 3600) + ' h ' + Math.floor((d.activo % 3600) / 60) + ' min activo');
+    if (d.commitsHoy) partes.push(d.commitsHoy === 1 ? T('1 commit') : T('{0} commits', d.commitsHoy));
+    if (d.pomodoros) partes.push(d.pomodoros === 1 ? T('1 pomodoro') : T('{0} pomodoros', d.pomodoros));
+    if (d.activo) partes.push(T('{0} h {1} min activo', Math.floor(d.activo / 3600), Math.floor((d.activo % 3600) / 60)));
     cola.push(
-      esperar(2.6, { ini() { posturaBase(); k.brazos = 'saludo'; k.ojos = 'felices'; k.texto = '🌙 ¡Buen trabajo hoy!' + (partes.length ? ' ' + partes.join(', ') + '.' : ''); } }),
-      esperar(1.6, { ini() { k.brazos = 'saludo'; k.texto = '¡Hasta mañana!'; }, fin() { posturaBase(); } }),
-      esperar(0.9, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'cerrados'; k.texto = '*bostezo*'; }, fin() { posturaBase(); } })
+      esperar(2.6, { ini() { posturaBase(); k.brazos = 'saludo'; k.ojos = 'felices'; k.texto = '🌙 ' + T('¡Buen trabajo hoy!') + (partes.length ? ' ' + partes.join(', ') + '.' : ''); } }),
+      esperar(1.6, { ini() { k.brazos = 'saludo'; k.texto = T('¡Hasta mañana!'); }, fin() { posturaBase(); } }),
+      esperar(0.9, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'cerrados'; k.texto = T('*bostezo*'); }, fin() { posturaBase(); } })
     );
   }
   function lonche() {
-    cola.push(esperar(0.01, { ini() { posturaBase(); k.texto = 'Hora de la comida 🥪'; k.sosteniendo = 'torta'; k.mordidas = 3; k.ojos = 'felices'; } }));
+    cola.push(esperar(0.01, { ini() { posturaBase(); k.texto = T('Hora de la comida 🥪'); k.sosteniendo = 'torta'; k.mordidas = 3; k.ojos = 'felices'; } }));
     for (let i = 0; i < 3; i++) {
       cola.push(
         esperar(0.35, { ini() { ponerPose('aplastado'); k.boca = true; k.ojos = 'cerrados'; } }),
         esperar(0.45, { ini() { ponerPose('frente'); k.boca = false; k.ojos = 'felices'; k.mordidas = 2 - i; } })
       );
     }
-    cola.push(esperar(0.8, { ini() { k.sosteniendo = null; k.texto = '¡Provecho! Tú también come algo'; }, fin() { posturaBase(); } }));
+    cola.push(esperar(0.8, { ini() { k.sosteniendo = null; k.texto = T('¡Provecho! Tú también come algo'); }, fin() { posturaBase(); } }));
   }
   function pausaActiva(d) {
     const h = Math.floor((d.minutos || 90) / 60), m = (d.minutos || 90) % 60;
-    const texto = 'Llevas ' + (h ? h + ' h ' : '') + m + ' min seguidos: ¡estírate conmigo! 🙆';
+    const texto = h ? T('Llevas {0} h {1} min seguidos: ¡estírate conmigo! 🙆', h, m) : T('Llevas {0} min seguidos: ¡estírate conmigo! 🙆', m);
     cola.push(
       esperar(1.2, { ini() { posturaBase(); k.texto = texto; ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'cerrados'; } }),
       esperar(1.4, { act(p) { k.balanceo = Math.sin(p * Math.PI * 2) * 1.4; }, fin() { k.balanceo = 0; } }),
       esperar(0.6, { ini() { ponerPose('aplastado'); k.brazos = 'normal'; } }),
       esperar(1.0, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'felices'; } }),
-      esperar(0.4, { ini() { posturaBase(); k.texto = 'Y toma agua 💧'; } })
+      esperar(0.4, { ini() { posturaBase(); k.texto = T('Y toma agua 💧'); } })
     );
   }
   function tomarAgua(d) {
     cola.push(esperar(2, {
-      ini() { posturaBase(); k.sosteniendo = 'vaso'; k.brazos = 'frasco'; k.texto = '💧 Vaso ' + (d.vasos || 1) + (d.meta ? ' de ' + d.meta : ''); },
+      ini() { posturaBase(); k.sosteniendo = 'vaso'; k.brazos = 'frasco'; k.texto = '💧 ' + (d.meta ? T('Vaso {0} de {1}', d.vasos || 1, d.meta) : T('Vaso {0}', d.vasos || 1)); },
       act(p) { k.ojos = p > 0.3 && p < 0.7 ? 'cerrados' : 'felices'; k.nivelVaso = 1 - Math.min(1, Math.max(0, (p - 0.3) / 0.4)); },
       fin() { posturaBase(); },
     }));
@@ -667,7 +672,7 @@
   function festejarLogro(d) {
     sonar('logro');
     cola.push(
-      esperar(0.01, { ini() { posturaBase(); k.texto = '🏅 ¡Logro: ' + (d.nombre || '') + '!'; k.sosteniendo = 'trofeo'; k.brazos = 'arriba-der'; k.ojos = 'felices'; confeti(40); } }),
+      esperar(0.01, { ini() { posturaBase(); k.texto = '🏅 ' + T('¡Logro: {0}!', d.nombre || ''); k.sosteniendo = 'trofeo'; k.brazos = 'arriba-der'; k.ojos = 'felices'; confeti(40); } }),
       ...salto(16, 0.45, { ini() { ponerPose('estirado'); k.brazos = 'arriba-der'; k.sosteniendo = 'trofeo'; } }),
       esperar(1.6, { ini() { ponerPose('frente'); k.brazos = 'arriba-der'; k.sosteniendo = 'trofeo'; }, fin() { posturaBase(); } })
     );
@@ -675,7 +680,7 @@
   // Despertador: lo levanta sonando (tiembla) con el mensaje de la alarma.
   function sonarAlarma(d) {
     sonar('alarma');
-    const texto = '⏰ ' + (d.hora || '') + ' — ' + (d.mensaje || '¡Es hora!');
+    const texto = '⏰ ' + (d.hora || '') + ' — ' + (d.mensaje || T('¡Es hora!'));
     cola.push(
       esperar(0.01, { ini() { posturaBase(); k.mirar = 0; k.texto = texto; k.sosteniendo = 'despertador'; k.brazos = 'arriba-der'; k.ojos = 'abiertos'; } }),
       ...salto(12, 0.35, { ini() { ponerPose('estirado'); k.brazos = 'arriba-der'; k.sosteniendo = 'despertador'; k.texto = texto; } }),
@@ -701,12 +706,12 @@
   const G_NOTA = ['..XX', '..X.', '..X.', 'XXX.', 'XX..'];
 
   function paraguas() {
-    cola.push(esperar(3, { libre: true, ini() { k.texto = 'Afuera llueve ☔'; k.sosteniendo = 'paraguas'; k.brazos = 'arriba-der'; k.mirar = -1; }, fin() { k.sosteniendo = null; k.brazos = 'normal'; } }));
+    cola.push(esperar(3, { libre: true, ini() { k.texto = T('Afuera llueve ☔'); k.sosteniendo = 'paraguas'; k.brazos = 'arriba-der'; k.mirar = -1; }, fin() { k.sosteniendo = null; k.brazos = 'normal'; } }));
   }
   function abanicarse() {
     cola.push(esperar(2.6, {
       libre: true,
-      ini() { k.texto = '¡Qué calor! ' + est.clima.temp + ' °C 🥵'; k.sosteniendo = 'abanico'; k.brazos = 'frasco'; k.sudor = true; },
+      ini() { k.texto = T('¡Qué calor! {0} °C 🥵', est.clima.temp); k.sosteniendo = 'abanico'; k.brazos = 'frasco'; k.sudor = true; },
       fin() { k.sosteniendo = null; k.brazos = 'normal'; k.sudor = false; },
     }));
   }
@@ -752,7 +757,7 @@
       visita.saludo = true; visita.pausa = 2.2;
       if (k.modo === 'libre') {
         interrumpirLibre();
-        cola.push(esperar(2, { ini() { posturaBase(); k.brazos = 'saludo'; k.ojos = 'felices'; k.mirar = visita.x > k.x ? 1 : -1; k.texto = '¡Hola, ' + visita.tipo + '! 👋'; }, fin() { posturaBase(); } }));
+        cola.push(esperar(2, { ini() { posturaBase(); k.brazos = 'saludo'; k.ojos = 'felices'; k.mirar = visita.x > k.x ? 1 : -1; k.texto = T('¡Hola, {0}! 👋', T(visita.tipo)); }, fin() { posturaBase(); } }));
       }
     }
     if (visita.pausa > 0) { visita.pausa -= dt; return; }
@@ -921,7 +926,7 @@
   function tomarCafe() {
     cola.push(esperar(2.6, {
       libre: true,
-      ini() { k.texto = 'Café de la mañana ☕'; k.sosteniendo = 'taza'; k.brazos = 'frasco'; k.mirar = 1; },
+      ini() { k.texto = T('Café de la mañana ☕'); k.sosteniendo = 'taza'; k.brazos = 'frasco'; k.mirar = 1; },
       act(p, dt) {
         k.ojos = p > 0.4 && p < 0.6 ? 'cerrados' : p > 0.6 ? 'felices' : null; // sorbo
         if (Math.random() < dt * 5) particulas.push({ tipo: 'vapor', x: k.x + 6.3 * C + azar(-2, 2), y: suelo - 8 * C, vx: azar(-3, 3), vy: -azar(8, 14), vida: 0, max: 1.2 });
@@ -954,7 +959,7 @@
   function seguirSiesta() {
     cola.push(esperar(1.5, {
       libre: true,
-      ini() { k.ojos = 'cerrados'; k.texto = 'Se quedó dormido sobre la laptop… (' + est.inactivoMin + ' min sin actividad)'; zeta(); },
+      ini() { k.ojos = 'cerrados'; k.texto = T('Se quedó dormido sobre la laptop… ({0} min sin actividad)', est.inactivoMin); zeta(); },
       act(p) { k.cabeceo = Math.sin(p * Math.PI) * 0.5; },
       fin() { k.cabeceo = 0; },
     }));
@@ -962,7 +967,7 @@
   function despertarDeSiesta() {
     cola.push(
       esperar(0.5, {
-        ini() { k.ojos = 'abiertos'; k.texto = '¡Ah! Ya volviste'; k.cabeceo = 0; puf(k.x, suelo - 10 * C); },
+        ini() { k.ojos = 'abiertos'; k.texto = T('¡Ah! Ya volviste'); k.cabeceo = 0; puf(k.x, suelo - 10 * C); },
         act(p) { k.alt = Math.sin(Math.PI * p) * 8; },
         fin() { k.alt = 0; k.modo = 'trabajo'; }, // sigue con la laptop afuera
       })
@@ -973,7 +978,7 @@
   // ---------- Errores en cero: escoba ----------
   function barrer(d) {
     cola.push(
-      esperar(0.01, { ini() { posturaBase(); k.texto = '✨ ¡Cero errores!' + (d.antes ? ' (eran ' + d.antes + ')' : ''); k.sosteniendo = 'escoba'; k.ojos = 'felices'; } }),
+      esperar(0.01, { ini() { posturaBase(); k.texto = '✨ ' + T('¡Cero errores!') + (d.antes ? ' ' + T('(eran {0})', d.antes) : ''); k.sosteniendo = 'escoba'; k.ojos = 'felices'; } }),
       esperar(2.4, {
         act(p, dt) {
           const lado = Math.sin(p * Math.PI * 6);
@@ -998,7 +1003,7 @@
     cola.push(
       esperar(0.01, {
         ini() {
-          posturaBase(); k.texto = '🧯 ' + (d.nombre || 'Un servicio') + ' no responde' + (d.detalle ? ' (' + d.detalle + ')' : '');
+          posturaBase(); k.texto = '🧯 ' + T('{0} no responde', d.nombre || T('Un servicio')) + (d.detalle ? ' (' + d.detalle + ')' : '');
           k.ojos = 'abiertos'; k.sudor = true; k.sosteniendo = 'extintor';
         },
       }),
@@ -1043,7 +1048,7 @@
   }
   function bailar(festejo, texto) {
     const lado = [1, -1, 1, -1, 1, -1];
-    cola.push(esperar(0.01, { libre: !festejo, ini() { k.ojos = 'felices'; if (festejo) k.texto = texto || '¡Se reinició tu ventana de uso!'; } }));
+    cola.push(esperar(0.01, { libre: !festejo, ini() { k.ojos = 'felices'; if (festejo) k.texto = texto || T('¡Se reinició tu ventana de uso!'); } }));
     lado.forEach((l) => {
       cola.push(...salto(9, 0.32, {
         libre: !festejo,
@@ -1067,7 +1072,7 @@
     const colores = [COL.verde, COL.morado, COL.lente];
     cola.push(esperar(2.6, {
       libre: true,
-      ini() { k.texto = 'Revisa un experimento'; k.frasco = { color: colores[0] }; k.brazos = 'frasco'; k.mirar = 1; },
+      ini() { k.texto = T('Revisa un experimento'); k.frasco = { color: colores[0] }; k.brazos = 'frasco'; k.mirar = 1; },
       act(p, dt) {
         k.frasco.color = colores[Math.min(2, Math.floor(p * 3))];
         k.ojos = p > 0.8 ? 'felices' : null;
@@ -1081,9 +1086,9 @@
   function traducirAviso(t) {
     t = String(t || '');
     let m = /permission to use (.+)$/i.exec(t);
-    if (m) return 'permiso para usar ' + m[1];
-    if (/permission/i.test(t)) return 'tu permiso';
-    if (/question|input|answer/i.test(t)) return 'una respuesta';
+    if (m) return T('permiso para usar {0}', m[1]);
+    if (/permission/i.test(t)) return T('tu permiso');
+    if (/question|input|answer/i.test(t)) return T('una respuesta');
     return t;
   }
   function manoLevantada() {
@@ -1093,7 +1098,7 @@
         posturaBase();
         k.brazos = 'saludo'; k.mirar = 0; k.ojos = 'abiertos';
         const msj = traducirAviso(est.claudeNecesita && est.claudeNecesita.mensaje);
-        k.texto = '✋ Claude te necesita' + (msj ? ': ' + recortar(msj, 46) : '');
+        k.texto = '✋ ' + T('Claude te necesita') + (msj ? ': ' + recortar(msj, 46) : '');
       },
     }));
   }
@@ -1104,7 +1109,7 @@
   function claudeListo(d) {
     sonar('listo');
     cola.push(
-      esperar(0.3, { ini() { posturaBase(); k.mirar = 0; k.ojos = 'felices'; k.texto = '📜 ¡Claude terminó! (' + duracionCorta(d.duracion) + ')'; } }),
+      esperar(0.3, { ini() { posturaBase(); k.mirar = 0; k.ojos = 'felices'; k.texto = '📜 ' + T('¡Claude terminó! ({0})', duracionCorta(d.duracion)); } }),
       ...salto(14, 0.4, { ini() { ponerPose('estirado'); k.brazos = 'arriba-der'; k.sosteniendo = 'papel'; } }),
       esperar(2.2, {
         ini() { k.brazos = 'arriba-der'; k.sosteniendo = 'papel'; ponerPose('frente'); },
@@ -1146,7 +1151,7 @@
       esperar(0.5, {
         ini() {
           posturaBase(); k.mirar = 0;
-          k.texto = '✗ Falló ' + nombreComando(d.comando) + (d.codigo != null ? ' (código ' + d.codigo + ')' : '');
+          k.texto = '✗ ' + (d.codigo != null ? T('Falló {0} (código {1})', nombreComando(d.comando), d.codigo) : T('Falló {0}', nombreComando(d.comando)));
           k.frasco = { color: COL.rojo }; k.brazos = 'frasco'; k.ojos = 'abiertos';
         },
         act(p) { k.balanceo = Math.sin(p * 40) * 0.12 * p; }, // el matraz tiembla
@@ -1182,8 +1187,8 @@
   }
   function festejarCommit(d) {
     sonar('commit');
-    const texto = '¡Commit' + (d.repo ? ' en ' + d.repo : '') + '!' + (d.mensaje ? ' «' + recortar(d.mensaje, 30) + '»' : '') +
-      (d.racha >= 2 ? ' · racha de ' + d.racha + ' días 🏅' : '');
+    const texto = (d.repo ? T('¡Commit en {0}!', d.repo) : T('¡Commit!')) + (d.mensaje ? ' «' + recortar(d.mensaje, 30) + '»' : '') +
+      (d.racha >= 2 ? ' · ' + T('racha de {0} días 🏅', d.racha) : '');
     cola.push(esperar(0.01, { ini() { posturaBase(); k.mirar = 0; k.texto = texto; k.ojos = 'felices'; confeti(60); } }));
     cola.push(...salto(26, 0.55, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'felices'; } }));
     cola.push(esperar(0.25, { ini() { confeti(30); } }));
@@ -1193,7 +1198,7 @@
 
   let cohete = null;
   function festejarPush(d) {
-    const texto = '¡Push! ' + (d.cuantos ? d.cuantos + ' commit' + (d.cuantos === 1 ? '' : 's') + ' ' : '') + 'volando' + (d.repo ? ' a ' + d.repo : '');
+    const texto = '¡Push! ' + (d.cuantos === 1 ? T('1 commit volando') : d.cuantos ? T('{0} commits volando', d.cuantos) : T('volando')) + (d.repo ? ' ' + T('a {0}', d.repo) : '');
     cola.push(
       esperar(0.5, {
         ini() {
@@ -1244,7 +1249,7 @@
         max: 6,
         ini() {
           posturaBase();
-          k.texto = est.temporada === 'marmota' ? '¡Tamales de Candelaria!' : est.temporada === 'reyes' ? '¡Rosca de Reyes! ¿Le saldrá el niño?' : '¡Eucalipto!';
+          k.texto = est.temporada === 'marmota' ? T('¡Tamales de Candelaria!') : est.temporada === 'reyes' ? T('¡Rosca de Reyes! ¿Le saldrá el niño?') : T('¡Eucalipto!');
           const lejos = k.x < W / 2 ? azar(W * 0.55, W - 9 * C) : azar(9 * C, W * 0.45);
           comida = comidaSoltada
             ? { x: Math.max(4 * C, Math.min(W - 4 * C, comidaSoltada.x)), alt: Math.max(0, comidaSoltada.alt), v: 0, hojas: 3, enSuelo: false }
@@ -1275,7 +1280,7 @@
         }),
       ]),
       esperar(0.6, {
-        ini() { k.sosteniendo = null; comida = null; k.ojos = 'felices'; k.texto = '¡Qué rico!'; vscode.postMessage({ tipo: 'efecto', accion: 'comer' }); },
+        ini() { k.sosteniendo = null; comida = null; k.ojos = 'felices'; k.texto = T('¡Qué rico!'); vscode.postMessage({ tipo: 'efecto', accion: 'comer' }); },
         fin() { k.ojos = null; },
       })
     );
@@ -1289,7 +1294,7 @@
       max: 28,
       ini() {
         posturaBase();
-        k.texto = '¡A jugar!';
+        k.texto = T('¡A jugar!');
         k.ojos = 'felices';
         pelota = { x: azar(W * 0.25, W * 0.75), alt: 90, vx: azar(-30, 30), v: 0, giro: 0, alfa: 1 };
       },
@@ -1328,7 +1333,7 @@
         k.caminando = false;
         pelota.desvanecer = true;
         k.ojos = 'felices';
-        k.texto = '¡Buen partido!';
+        k.texto = T('¡Buen partido!');
         vscode.postMessage({ tipo: 'efecto', accion: 'jugar' });
       },
     }), esperar(0.7, { fin() { k.ojos = null; ponerPose('frente'); } }));
@@ -1357,7 +1362,7 @@
   // ---------- Mimar ----------
   function mimar() {
     cola.push(
-      esperar(0.2, { ini() { posturaBase(); ponerPose('aplastado'); k.ojos = 'felices'; k.texto = '¡Le encanta!'; } }),
+      esperar(0.2, { ini() { posturaBase(); ponerPose('aplastado'); k.ojos = 'felices'; k.texto = T('¡Le encanta!'); } }),
       esperar(1.5, {
         ini() { ponerPose('frente'); },
         act(p, dt) { if (Math.random() < dt * 4.5) corazon(); },
@@ -1939,7 +1944,7 @@
         if (k.modo !== 'libre') { arrastre = null; return; }
         cola = []; paso = null; posturaBase();
         k.cargado = true; ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'abiertos';
-        k.texto = '¡Wiii!';
+        k.texto = T('¡Wiii!');
       }
     }
     if (arrastre.movido && arrastre.tipo === 'koala') {
@@ -1967,7 +1972,7 @@
       k.alt = 0; k.cayendo = false;
       cola.push(
         esperar(0.25, { ini() { ponerPose('aplastado'); k.brazos = 'normal'; k.ojos = 'cerrados'; puf(k.x, suelo - C); } }),
-        esperar(0.8, { ini() { ponerPose('frente'); k.ojos = 'felices'; k.texto = '¡Otra vez!'; }, fin() { k.ojos = null; } })
+        esperar(0.8, { ini() { ponerPose('frente'); k.ojos = 'felices'; k.texto = T('¡Otra vez!'); }, fin() { k.ojos = null; } })
       );
     }
   }
@@ -2048,8 +2053,8 @@
     if (!el) return;
     let t = k.texto || textoOcio();
     if (k.modo === 'dormido') t = est.energiaLigada && est.necesidades.energia < 30
-      ? 'Duerme hasta que se recargue la sesión (' + horaReinicio() + ')'
-      : 'Durmiendo… zzz';
+      ? T('Duerme hasta que se recargue la sesión ({0})', horaReinicio())
+      : T('Durmiendo… zzz');
     if (t !== textoPrevio) { el.textContent = t; textoPrevio = t; }
   }
 
@@ -2066,21 +2071,21 @@
       if (n) n.textContent = v;
     }
     const le = $('l-energia'), se = $('s-energia');
-    if (le) le.title = est.energiaLigada ? 'Energía = lo que te queda de la sesión de 5 h de Claude Code' : 'Energía del koala (sin dato oficial de Claude Code)';
-    if (se) se.textContent = est.energiaLigada ? '⚡ ligada a tu sesión de 5 h · se recarga ' + horaReinicio() : '';
+    if (le) le.title = est.energiaLigada ? T('Energía = lo que te queda de la sesión de 5 h de Claude Code') : T('Energía del koala (sin dato oficial de Claude Code)');
+    if (se) se.textContent = est.energiaLigada ? '⚡ ' + T('ligada a tu sesión de 5 h · se recarga {0}', horaReinicio()) : '';
     const r = est.rutina;
     const ba = $('b-agua'), na = $('n-agua');
     if (r && ba) { ba.style.width = Math.min(100, (100 * r.agua) / r.metaAgua) + '%'; ba.style.background = 'var(--vscode-charts-blue, #3794ff)'; }
     if (r && na) na.textContent = r.agua + '/' + r.metaAgua;
     const bd = $('btn-dormir');
-    if (bd) bd.textContent = est.durmiendo ? 'Despertar' : 'Dormir';
+    if (bd) bd.textContent = est.durmiendo ? T('Despertar') : T('Dormir');
   }
 
   function horaReinicio() {
     const v = est.uso && est.uso.cinco;
-    if (!v || !v.reinicio) return 'en el próximo corte';
+    if (!v || !v.reinicio) return T('en el próximo corte');
     const d = new Date(v.reinicio);
-    return 'a las ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' (en ' + falta(v.reinicio) + ')';
+    return T('a las {0} (en {1})', String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), falta(v.reinicio));
   }
   const NOMBRE_FASE = { enfoque: 'Experimento (enfoque)', descanso: 'Descanso', descansoLargo: 'Descanso largo' };
   function pintarPomodoroDom() {
@@ -2091,11 +2096,11 @@
     const ms = p.fase ? restantePomo() : (p.enfoque || 25) * 60000;
     const s = Math.ceil(ms / 1000);
     reloj.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-    fase.textContent = p.fase ? NOMBRE_FASE[p.fase] + (p.pausado ? ' (en pausa)' : '') : 'Pomodoro';
+    fase.textContent = p.fase ? T(NOMBRE_FASE[p.fase]) + (p.pausado ? ' ' + T('(en pausa)') : '') : 'Pomodoro';
     barra.style.width = (p.fase && p.total ? Math.min(100, 100 * (1 - ms / p.total)) : 0) + '%';
     barra.className = p.fase && p.fase !== 'enfoque' ? 'descanso' : '';
-    if (sub) sub.textContent = (p.hoy || 0) + ' pomodoro' + (p.hoy === 1 ? '' : 's') + ' completado' + (p.hoy === 1 ? '' : 's') + ' hoy';
-    if (alt) alt.textContent = !p.fase ? 'Iniciar experimento' : p.pausado ? 'Reanudar' : 'Pausar';
+    if (sub) sub.textContent = p.hoy === 1 ? T('1 pomodoro completado hoy') : T('{0} pomodoros completados hoy', p.hoy || 0);
+    if (alt) alt.textContent = !p.fase ? T('Iniciar experimento') : p.pausado ? T('Reanudar') : T('Pausar');
     if (det) det.disabled = !p.fase;
   }
   function falta(ms) {
@@ -2107,7 +2112,7 @@
   }
   function tokens(n) {
     if (n >= 1e6) return (n / 1e6).toFixed(1) + ' M';
-    if (n >= 1e3) return Math.round(n / 1e3) + ' mil';
+    if (n >= 1e3) return T('{0} mil', Math.round(n / 1e3));
     return String(n);
   }
   function colorUsoCss(p) {
@@ -2124,29 +2129,29 @@
       p.textContent = v.reiniciada ? '0 %' : Math.round(pct) + ' %';
       t.style.width = pct + '%';
       t.style.background = colorUsoCss(pct);
-      if (v.reiniciada) partes.push('reiniciada, esperando dato nuevo');
-      else if (v.reinicio) partes.push('se reinicia en ' + falta(v.reinicio));
+      if (v.reiniciada) partes.push(T('reiniciada, esperando dato nuevo'));
+      else if (v.reinicio) partes.push(T('se reinicia en {0}', falta(v.reinicio)));
     } else {
       p.textContent = '—';
       t.style.width = '0';
     }
-    partes.push(tokens(tok) + ' tokens ' + etiquetaTok);
+    partes.push(T(etiquetaTok, tokens(tok)));
     s.textContent = partes.join(' · ');
   }
   function pintarUso() {
     const u = est.uso;
     if (!u) return;
-    pintarProbeta('cinco', u.cinco, u.local.tokens5h, 'en esta sesión');
-    pintarProbeta('semana', u.semana, u.local.tokens7d, 'en la semana');
+    pintarProbeta('cinco', u.cinco, u.local.tokens5h, '{0} tokens en esta sesión');
+    pintarProbeta('semana', u.semana, u.local.tokens7d, '{0} tokens en la semana');
     const nota = $('uso-nota'), btn = $('btn-configurar');
     const oficial = u.cinco || u.semana;
     if (nota) {
       if (oficial && u.actualizado) {
         const min = Math.max(0, Math.round((Date.now() - u.actualizado) / 60000));
-        nota.textContent = (u.fuente === 'anthropic' ? 'Dato real de Anthropic' : 'Dato de la status line') + ' de hace ' + min + ' min' +
-          (u.modelo ? ' · ' + u.modelo : '') + '. Tokens contados en tus transcripciones locales.';
+        nota.textContent = (u.fuente === 'anthropic' ? T('Dato real de Anthropic de hace {0} min', min) : T('Dato de la status line de hace {0} min', min)) +
+          (u.modelo ? ' · ' + u.modelo : '') + '. ' + T('Tokens contados en tus transcripciones locales.');
       } else {
-        nota.textContent = 'Sin porcentaje oficial todavía: configura el monitor para que Claude Code lo comparta. Mientras, el koala cuenta tokens de tus transcripciones.';
+        nota.textContent = T('Sin porcentaje oficial todavía: configura el monitor para que Claude Code lo comparta. Mientras, el koala cuenta tokens de tus transcripciones.');
       }
     }
     if (btn) btn.style.display = oficial ? 'none' : 'inline-block';

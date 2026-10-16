@@ -2,6 +2,8 @@
 // HTML y CSS del panel del koala (webview). Todo con nonce: la CSP no permite estilos ni scripts en línea.
 const vscode = require('vscode');
 const crypto = require('crypto');
+const idioma = require('./idioma');
+const { t } = idioma;
 
 function htmlVista(webview, extensionUri) {
   const nonce = crypto.randomBytes(16).toString('base64');
@@ -14,12 +16,12 @@ function htmlVista(webview, extensionUri) {
     `script-src 'nonce-${nonce}'`,
   ].join('; ');
   return `<!DOCTYPE html>
-<html lang="es-MX">
+<html lang="${idioma.esIngles() ? 'en' : 'es-MX'}">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Koala científico</title>
+<title>${t('Koala científico')}</title>
 <style nonce="${nonce}">
   body { margin: 0; padding: 6px 10px 12px; font-family: var(--vscode-font-family); font-size: 12px;
          color: var(--vscode-foreground); }
@@ -126,38 +128,38 @@ function htmlVista(webview, extensionUri) {
 </style>
 </head>
 <body>
-  <canvas id="lienzo" title="Clic para mimar al koala"></canvas>
-  <div id="estado">Preparando el laboratorio…</div>
+  <canvas id="lienzo" title="${t('Clic para mimar al koala')}"></canvas>
+  <div id="estado">${t('Preparando el laboratorio…')}</div>
   <nav class="pestanas" role="tablist">
-    <button data-pestana="mascota" class="sel">Mascota</button>
-    <button data-pestana="consumo">Consumo</button>
-    <button data-pestana="hoy">Hoy</button>
-    <button data-pestana="sistema">Sistema</button>
+    <button data-pestana="mascota" class="sel">${t('Mascota')}</button>
+    <button data-pestana="consumo">${t('Consumo')}</button>
+    <button data-pestana="hoy">${t('Hoy')}</button>
+    <button data-pestana="sistema">${t('Sistema')}</button>
   </nav>
   <div id="alertas"></div>
   <section class="vista sel" id="v-mascota">
-  <div class="fila"><span>Saciedad</span><div class="barra"><i id="b-saciedad"></i></div><span class="num" id="n-saciedad"></span></div>
-  <div class="fila"><span>Ánimo</span><div class="barra"><i id="b-animo"></i></div><span class="num" id="n-animo"></span></div>
-  <div class="fila"><span id="l-energia">Energía</span><div class="barra"><i id="b-energia"></i></div><span class="num" id="n-energia"></span></div>
+  <div class="fila"><span>${t('Saciedad')}</span><div class="barra"><i id="b-saciedad"></i></div><span class="num" id="n-saciedad"></span></div>
+  <div class="fila"><span>${t('Ánimo')}</span><div class="barra"><i id="b-animo"></i></div><span class="num" id="n-animo"></span></div>
+  <div class="fila"><span id="l-energia">${t('Energía')}</span><div class="barra"><i id="b-energia"></i></div><span class="num" id="n-energia"></span></div>
   <div class="sub" id="s-energia"></div>
-  <div class="fila"><span>Agua</span><div class="barra"><i id="b-agua"></i></div><span class="num" id="n-agua"></span></div>
+  <div class="fila"><span>${t('Agua')}</span><div class="barra"><i id="b-agua"></i></div><span class="num" id="n-agua"></span></div>
   <div class="botones">
-    <button data-accion="comer">Comer</button>
-    <button data-accion="jugar">Jugar</button>
-    <button data-accion="mimar">Mimar</button>
-    <button data-accion="dormir" id="btn-dormir">Dormir</button>
+    <button data-accion="comer">${t('Comer')}</button>
+    <button data-accion="jugar">${t('Jugar')}</button>
+    <button data-accion="mimar">${t('Mimar')}</button>
+    <button data-accion="dormir" id="btn-dormir">${t('Dormir')}</button>
   </div>
-  <button class="boton-agua" id="btn-agua" title="Suma un vaso a tu meta del día">💧 Tomé un vaso de agua</button>
+  <button class="boton-agua" id="btn-agua" title="${t('Suma un vaso a tu meta del día')}">${t('💧 Tomé un vaso de agua')}</button>
   <div class="alarmas-caja">
-    <div class="tit-alarmas">Alarmas</div>
+    <div class="tit-alarmas">${t('Alarmas')}</div>
     <div id="alarmas-lista"></div>
     <div class="alarma-form">
-      <input type="time" id="alarma-hora" aria-label="Hora">
-      <input type="text" id="alarma-msg" placeholder="¿Qué te recuerdo?" maxlength="80" aria-label="Mensaje">
-      <select id="alarma-rep" aria-label="Repetición">
-        <option value="una">Una vez</option><option value="diaria">Diaria</option><option value="laborables">Lun–vie</option>
+      <input type="time" id="alarma-hora" aria-label="${t('Hora')}">
+      <input type="text" id="alarma-msg" placeholder="${t('¿Qué te recuerdo?')}" maxlength="80" aria-label="${t('Mensaje')}">
+      <select id="alarma-rep" aria-label="${t('Repetición')}">
+        <option value="una">${t('Una vez')}</option><option value="diaria">${t('Diaria')}</option><option value="laborables">${t('Lun–vie')}</option>
       </select>
-      <button id="alarma-agregar" title="Agregar alarma">+</button>
+      <button id="alarma-agregar" title="${t('Agregar alarma')}">+</button>
     </div>
   </div>
   <div class="pomo">
@@ -167,31 +169,39 @@ function htmlVista(webview, extensionUri) {
       <div class="sub" id="pomo-sub"></div>
     </div>
     <div class="pomo-botones">
-      <button id="pomo-alternar">Iniciar experimento</button>
-      <button id="pomo-detener">Detener</button>
+      <button id="pomo-alternar">${t('Iniciar experimento')}</button>
+      <button id="pomo-detener">${t('Detener')}</button>
     </div>
   </div>
   </section>
   <section class="vista" id="v-consumo">
   <div class="lab">
-    <h3>Límites de tu plan</h3>
+    <h3>${t('Límites de tu plan')}</h3>
     <div class="probeta">
-      <div class="tit"><span>Sesión (5 h)</span><b id="p-cinco">—</b></div>
+      <div class="tit"><span>${t('Sesión (5 h)')}</span><b id="p-cinco">—</b></div>
       <div class="tubo"><i id="t-cinco"></i><span class="marcas"></span></div>
       <div class="sub" id="s-cinco"></div>
     </div>
     <div class="probeta">
-      <div class="tit"><span>Semana</span><b id="p-semana">—</b></div>
+      <div class="tit"><span>${t('Semana')}</span><b id="p-semana">—</b></div>
       <div class="tubo"><i id="t-semana"></i><span class="marcas"></span></div>
       <div class="sub" id="s-semana"></div>
     </div>
     <div id="uso-nota"></div>
-    <button id="btn-configurar">Configurar monitor</button>
+    <button id="btn-configurar">${t('Configurar monitor')}</button>
   </div>
   <div id="consumo-extra"></div>
   </section>
   <section class="vista" id="v-hoy"><div id="hoy"></div></section>
   <section class="vista" id="v-sistema"><div id="sistema"></div></section>
+  <script nonce="${nonce}">
+    window.KOALA_DIC = ${JSON.stringify(idioma.diccionario() || {}).replace(/</g, '\\u003c')};
+    window.KOALA_LOCALE = '${idioma.locale()}';
+    window.koalaT = function (s) {
+      var a = arguments, x = (window.KOALA_DIC && window.KOALA_DIC[s] !== undefined) ? window.KOALA_DIC[s] : s;
+      return x.replace(/\\{(\\d+)\\}/g, function (m, i) { var v = a[+i + 1]; return v === undefined ? m : String(v); });
+    };
+  </script>
   <script nonce="${nonce}" src="${script}"></script>
   <script nonce="${nonce}" src="${scriptPanel}"></script>
 </body>

@@ -2,6 +2,7 @@
 // Pomodoro del koala: fases de enfoque (experimento), descanso y descanso largo, con pausa.
 // El estado se guarda en globalState ('koala.pomodoro') para sobrevivir a recargas de VS Code.
 
+const { t } = require('./idioma');
 const NOMBRE_FASE = { enfoque: 'Experimento (enfoque)', descanso: 'Descanso', descansoLargo: 'Descanso largo' };
 const fechaTexto = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 
@@ -29,7 +30,7 @@ function crearPomodoro({ contexto, minutos, antesDeLargo = () => 4, alCambiar = 
     if (!p.fase) { barra.hide(); return; }
     const icono = p.fase === 'enfoque' ? '$(beaker)' : '$(coffee)';
     barra.text = `${icono} ${relojTexto(restante())}${p.pausa !== null ? ' ⏸' : ''}`;
-    barra.tooltip = `${NOMBRE_FASE[p.fase]} · ${p.hoy} hoy · clic para ${p.pausa !== null ? 'reanudar' : 'pausar'}`;
+    barra.tooltip = `${t(NOMBRE_FASE[p.fase])} · ` + t('{0} hoy', p.hoy) + ' · ' + (p.pausa !== null ? t('clic para reanudar') : t('clic para pausar'));
     barra.show();
   }
   function cambio() { guardar(); pintar(); alCambiar(); }

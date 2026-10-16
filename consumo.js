@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const costos = require('./costos');
+const { t } = require('./idioma');
 
 const HORA = 3600 * 1000;
 const CINCO_HORAS = 5 * HORA;
@@ -178,7 +179,7 @@ function crearConsumo({ dirProyectos, oficial = () => ({}), alActualizar = () =>
     const dias = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(desde - i * 86400000 + 12 * HORA);
-      dias.push(['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'][d.getDay()]);
+      dias.push(t(['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'][d.getDay()]));
     }
     return { ...r, mapa, dias };
   }

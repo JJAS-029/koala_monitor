@@ -1,5 +1,13 @@
 # Registro de cambios
 
+## 1.4.0
+- **English**: the whole extension (panel, koala bubbles, notifications, commands and settings) is available
+  in English. It follows VS Code's display language, or force it with `koalaCientifico.idioma` (auto/es/en).
+- Todo el texto visible sale de `t()`/`T()` con el diccionario `l10n/en.json`; los títulos de comandos y
+  ajustes, de `package.nls.json`.
+- Código interno partido en módulos (vista, consumo, anthropic, pomodoro, configurar, alarmas, rutina) con
+  pruebas de su lógica (`npm test`).
+
 ## 1.3.0
 - **Alarmas**: a la hora que quieras, con mensaje y repetición (una vez, diaria, lunes a viernes o días
   elegidos). El koala saca un despertador que suena y llega una notificación con *Posponer 5 min*. Si VS Code
