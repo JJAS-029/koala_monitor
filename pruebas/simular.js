@@ -226,7 +226,7 @@ function cada(e, tomar, total, intervalo) {
 
 // Usado como librería (p. ej. pruebas/icono.js): exporta el entorno y no corre las escenas.
 if (require.main !== module) {
-  module.exports = { crearEntorno, escribirPNG };
+  module.exports = { crearEntorno, escribirPNG, estado };
   return;
 }
 

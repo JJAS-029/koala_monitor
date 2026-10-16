@@ -655,6 +655,18 @@ async function verAlarmasComando() {
   enviarEstado();
 }
 
+// Llama a un visitante en ese momento (si no, llegan solos cada 20–40 min).
+async function invitarVisitante() {
+  const opciones = [
+    { label: '🐼 ' + t('panda'), tipo: 'panda' }, { label: '🦎 ' + t('ajolote'), tipo: 'ajolote' },
+    { label: '🐀 ' + t('tlacuache'), tipo: 'tlacuache' }, { label: '🎲 ' + t('Al azar'), tipo: null },
+  ];
+  const r = await vscode.window.showQuickPick(opciones, { placeHolder: t('¿Quién viene de visita?') });
+  if (!r) return;
+  await mostrarPanel();
+  setTimeout(() => animar('visitaPrueba', { tipo: r.tipo, modo: 'suelo' }), 600);
+}
+
 async function elegirCiudad() {
   const texto = await vscode.window.showInputBox({
     prompt: t('¿En qué ciudad estás? (para el clima de la ventana del laboratorio)'),
@@ -881,6 +893,7 @@ function activate(ctx) {
   ctx.subscriptions.push({ dispose() { clearInterval(relojRutina); clearInterval(relojClima); } });
   comando('koalaCientifico.agua', () => { rutina.agua(); enviarEstado(); });
   comando('koalaCientifico.elegirCiudad', elegirCiudad);
+  comando('koalaCientifico.invitarVisitante', invitarVisitante);
   alarmas = crearAlarmas({ contexto: ctx, alSonar: alSonarAlarma });
   comando('koalaCientifico.nuevaAlarma', nuevaAlarmaComando);
   comando('koalaCientifico.alarmas', verAlarmasComando);

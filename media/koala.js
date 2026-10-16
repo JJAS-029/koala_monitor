@@ -241,7 +241,7 @@
     if (a === 'tomarAgua') return tomarAgua(datosAccion.tomarAgua || {});
     if (a === 'logro') return festejarLogro(datosAccion.logro || {});
     if (a === 'alarma') return sonarAlarma(datosAccion.alarma || {});
-    if (a === 'visitaPrueba') { visita = null; proximaVisita = 0; return descansar(); }
+    if (a === 'visitaPrueba') { visita = null; proximaVisita = 0; visitaForzada = datosAccion.visitaPrueba || null; datosAccion.visitaPrueba = null; return descansar(); }
     if (a === 'pedirAtencion') return saltar();
     if (a === 'errores0') return barrer(datosAccion.errores0 || {});
     if (a === 'servicioCaido') return apagarFuego(datosAccion.servicioCaido || {});
@@ -737,14 +737,18 @@
   let visita = null; // { tipo, modo: 'suelo'|'ventana', x, dir, t }
   let proximaVisita = 6 * 60 + Math.random() * 6 * 60; // primera visita entre 6 y 12 min
   const VISITANTES = ['panda', 'ajolote', 'tlacuache'];
+  let visitaForzada = null; // { tipo, modo } del comando "invitar a un visitante"
   function moverVisita(dt) {
     if (!est.visitantes) return;
     if (!visita) {
       proximaVisita -= dt;
       if (proximaVisita > 0 || k.modo !== 'libre') return;
       const dir = Math.random() < 0.5 ? 1 : -1;
-      const modo = Math.random() < 0.5 ? 'suelo' : 'ventana';
-      visita = { tipo: VISITANTES[Math.floor(Math.random() * VISITANTES.length)], modo, dir, t: 0, x: dir > 0 ? -6 * C : W + 6 * C, saludo: false };
+      const f = visitaForzada || {};
+      visitaForzada = null;
+      const modo = f.modo || (Math.random() < 0.5 ? 'suelo' : 'ventana');
+      const tipo = VISITANTES.includes(f.tipo) ? f.tipo : VISITANTES[Math.floor(Math.random() * VISITANTES.length)];
+      visita = { tipo, modo, dir, t: 0, x: dir > 0 ? -6 * C : W + 6 * C, saludo: false };
       if (modo === 'ventana') { const v = ventanaRect(); visita.x = dir > 0 ? v.x - 8 : v.x + v.w + 8; }
       vscode.postMessage({ tipo: 'visita' });
       return;
@@ -768,6 +772,85 @@
   function interrumpirLibre() {
     if (paso && paso.libre) { cola = []; paso = null; }
   }
+  // Sprites de los visitantes: cada letra es un pixel (u celdas); '.' = vacío. Miran a la derecha (+x).
+  function pintarMapa(filas, paleta, u) {
+    const ancho = filas[0].length * u, alto = filas.length * u;
+    filas.forEach((f, r) => {
+      for (let c = 0; c < f.length; c++) { const col = paleta[f[c]]; if (col) cel(-ancho / 2 + c * u, -alto + r * u, u, u, col); }
+    });
+  }
+  const SPRITES_VISITA = {
+    ajolote: {
+      paleta: { P: '#F6A9C1', S: '#E68AA6', L: '#FDD5E1', G: '#E2457C', D: '#B3245A', K: '#1A1A1A', B: '#FFFFFF', M: '#9C1F4C' },
+      filas: [
+        '..................D...D.......',
+        '................D.G..GD.......',
+        '.................GG.GG.D......',
+        '..............D.GGGGG..PPPP...',
+        '...............GGGGGPPPPPPPPP.',
+        '..LL..........D.GGGPPPPPPPPPPP',
+        '.LLLL...........GGPPPPPPPBKPPP',
+        'SPPPPPPLLLLLL....GPPPPPPPKKPPP',
+        '.SPPPPPPPPPPPPPPPPPPPPPPPPPPPP',
+        '..SSPPPPPPPPPPPPPPPPPPMPPPPPMP',
+        '....SSPPLLLLLLLLLLLLPPPMMMMMPP',
+        '.......SSS.....SSS..SPPPPPPPS.',
+        '.......PP.P...PP.P...........',
+        '......P.P....P.P.............',
+      ],
+      patas: [
+        '........PP.P...PP.P..........',
+        '........P.P.....P.P..........',
+      ],
+    },
+    panda: {
+      paleta: { W: '#F4F4F4', K: '#4A4A55', P: '#1C1C1C', E: '#FFFFFF', N: '#1C1C1C', R: '#F2A0B5', g: '#D6D6D6' }, // K más claro que el fondo oscuro de VS Code
+      filas: [
+        '..KKK......KKK..',
+        '.KKKKKWWWWKKKKK.',
+        '.KKKWWWWWWWWKKK.',
+        '..WWWWWWWWWWWW..',
+        '.WWPPPWWWWPPPWW.',
+        '.WPPEPWWWWPEPPW.',
+        '.WPPPWWWWWWPPPW.',
+        '.WWWWWWNNWWWWWW.',
+        '.RWWWWWWWWWWWWR.',
+        '..WWWWWNNWWWWW..',
+        '...gWWWWWWWWg...',
+        '.KKKKWWWWWWKKKK.',
+        'KKKKWWWWWWWWKKKK',
+        'KKK.WWWWWWWW.KKK',
+        '....WWWWWWWW....',
+        '....gWWWWWWg....',
+        '...KKKK..KKKK...',
+        '...KKKK..KKKK...',
+      ],
+      patas: [
+        '...KKKK...KKK...',
+        '....KKK..KKKK...',
+      ],
+    },
+    tlacuache: {
+      paleta: { G: '#A3A3A3', S: '#7E7E7E', W: '#EDEDED', K: '#4A4A55', R: '#F2A0B5', T: '#E3C5BA', E: '#111111' },
+      filas: [
+        '.......................KK.....',
+        '......................KKK.....',
+        '.........SGGGGGGGGGS..WWWW....',
+        '.......SGGGGGGGGGGGGWWWWWWW...',
+        'TT....SGGGGGGGGGGGGGWWWEWWWW..',
+        '.TT..SGGGGGGGGGGGGGGWWWWWWWWWR',
+        '..TTTGGGGGGGGGGGGGGGGWWWWWWW..',
+        '.....SGGGGGGGGGGGGGGG.........',
+        '......SSGGGGGGGGGGGS..........',
+        '.......KK.K.....KK.K..........',
+        '......KK.K.....KK.K...........',
+      ],
+      patas: [
+        '........KK.K.....KK.K.........',
+        '.......K.K......K.K...........',
+      ],
+    },
+  };
   // Dibujo de los visitantes (ojo: en la ventana se recortan al vidrio).
   function dibujarVisitante(enVentana) {
     if (!visita || (visita.modo === 'ventana') !== enVentana) return;
@@ -776,24 +859,10 @@
     const base = enVentana ? v.y + v.h + 4 : suelo;
     const prev = S;
     S = { ox: visita.x, oy: base - salto, sx: visita.dir, sy: 1 };
-    const t = visita.tipo;
-    if (t === 'panda') {
-      cel(-2.5, -5, 5, 4, COL.blanco); cel(-3, -6, 1.5, 1.5, COL.negro); cel(1.5, -6, 1.5, 1.5, COL.negro);
-      cel(-1.8, -4.3, 1.2, 1.1, COL.negro); cel(0.6, -4.3, 1.2, 1.1, COL.negro); cel(-1.4, -4, 0.5, 0.5, COL.blanco); cel(1, -4, 0.5, 0.5, COL.blanco);
-      cel(-0.4, -3, 0.8, 0.5, COL.negro);
-      cel(-2.5, -1.2, 5, 1.2, COL.negro); cel(-2.8, -2.6, 1, 1.6, COL.negro); cel(1.8, -2.6, 1, 1.6, COL.negro);
-      if (visita.pausa > 0) cel(2.6, -6.5, 1, 2.5, COL.negro); // saluda
-    } else if (t === 'ajolote') {
-      cel(-3, -2.4, 6, 2.2, '#F4A6B8'); cel(1.5, -3.6, 2.4, 2.2, '#F4A6B8');
-      cel(1.2, -4.4, 0.4, 1, '#E06A8B'); cel(3.4, -4.4, 0.4, 1, '#E06A8B'); cel(0.9, -3.6, 0.4, 0.8, '#E06A8B'); cel(3.7, -3.6, 0.4, 0.8, '#E06A8B');
-      cel(2.1, -3, 0.4, 0.4, COL.negro); cel(3, -3, 0.4, 0.4, COL.negro); cel(2.4, -2.2, 0.8, 0.2, '#C2185B');
-      cel(-4.4, -2, 1.6, 0.7, '#F4A6B8'); cel(-2.2, -0.4, 0.6, 0.6, '#E8899F'); cel(0.8, -0.4, 0.6, 0.6, '#E8899F');
-    } else {
-      cel(-2.5, -3, 4.5, 2.6, '#9C9C9C'); cel(1.5, -3.6, 2.2, 2, '#D8D8D8'); cel(3.6, -3, 0.8, 0.6, '#F4A6B8');
-      cel(1.8, -4.2, 0.6, 0.7, '#3A3A3A'); cel(2.8, -3.2, 0.4, 0.4, COL.negro);
-      cel(-4.5, -2.8, 2.2, 0.4, '#D9C2B5'); cel(-5.2, -3.4, 0.8, 0.8, '#D9C2B5'); // cola pelona
-      cel(-2, -0.5, 0.6, 0.5, '#5A5A5A'); cel(1, -0.5, 0.6, 0.5, '#5A5A5A');
-    }
+    const sprite = SPRITES_VISITA[visita.tipo];
+    // pasitos: alterna la fila de las patas mientras camina
+    const filas = sprite.patas && visita.pausa <= 0 && Math.floor(visita.t * 6) % 2 ? sprite.filas.slice(0, -2).concat(sprite.patas) : sprite.filas;
+    pintarMapa(visita.pausa > 0 && sprite.saludo ? sprite.saludo : filas, sprite.paleta, enVentana ? 0.3 : 0.5);
     S = prev;
   }
 

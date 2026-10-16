@@ -1,5 +1,11 @@
 # Registro de cambios
 
+## 1.4.1
+- Visitantes redibujados y más grandes: el **ajolote** ahora tiene cabeza ancha, sonrisa, tres branquias
+  plumosas, cola con aleta y patitas (antes parecía un puerquito con cuernos); el **panda** tiene cuerpo
+  completo y el **tlacuache** más detalle. Caminan moviendo las patas y el negro ya se ve en el tema oscuro.
+- Nuevo comando **Invitar a un visitante**: eliges panda, ajolote, tlacuache o al azar y llega en ese momento.
+
 ## 1.4.0
 - **English**: the whole extension (panel, koala bubbles, notifications, commands and settings) is available
   in English. It follows VS Code's display language, or force it with `koalaCientifico.idioma` (auto/es/en).

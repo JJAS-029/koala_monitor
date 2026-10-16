@@ -2,7 +2,7 @@
   "name": "koala-cientifico",
   "displayName": "%nombre%",
   "description": "%descripcion%",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "publisher": "jjas-029",
   "license": "MIT",
   "icon": "media/icono.png",
@@ -123,6 +123,11 @@
       {
         "command": "koalaCientifico.elegirCiudad",
         "title": "%cmd.elegirCiudad%",
+        "category": "%categoria%"
+      },
+      {
+        "command": "koalaCientifico.invitarVisitante",
+        "title": "%cmd.invitarVisitante%",
         "category": "%categoria%"
       },
       {

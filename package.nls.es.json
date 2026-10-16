@@ -63,5 +63,6 @@
   "cfg.visitantes": "De vez en cuando pasa un panda, un ajolote o un tlacuache a saludar.",
   "cfg.sonidos": "Sonidos cortos al terminar Claude o un pomodoro, al festejar un commit y al desbloquear un logro.",
   "cfg.servicios": "Servicios que el koala vigila cada minuto (responde = verde). Ejemplo: { \"nombre\": \"Django\", \"url\": \"http://127.0.0.1:8000/\" }.",
-  "cfg.barraDeEstado": "Mostrar el consumo de Claude Code en la barra de estado de VS Code."
+  "cfg.barraDeEstado": "Mostrar el consumo de Claude Code en la barra de estado de VS Code.",
+  "cmd.invitarVisitante": "invitar a un visitante"
 }
