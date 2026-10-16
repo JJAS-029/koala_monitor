@@ -317,5 +317,9 @@
         }
       }
     }
+  },
+  "scripts": {
+    "test": "node --test pruebas/*.test.js",
+    "simular": "node pruebas/simular.js"
   }
 }

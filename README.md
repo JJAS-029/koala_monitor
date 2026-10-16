@@ -195,7 +195,9 @@ Si usas Claude Code por SSH, instala la extensión en el remoto (corre donde est
 MIT. Código en https://github.com/JJAS-029/koala_monitor.
 
 ## Desarrollo
-- Pruebas sin navegador: `node pruebas/simular.js [carpeta]` (capturas PNG por acción).
+- Pruebas de la lógica: `npm test` (o `node --test pruebas/*.test.js`): alarmas, costos, consumo, rachas,
+  logros, pomodoro, respuesta de Anthropic.
+- Pruebas de las animaciones sin navegador: `node pruebas/simular.js [carpeta]` (capturas PNG por acción).
 - Vista previa real del panel: `pruebas/vista-previa.js` (activa la extensión con un VS Code simulado
   y captura cada pestaña con Chromium sin interfaz; ver el encabezado del archivo).
 - Icono: `node pruebas/icono.js`. Capturas del readme: `node pruebas/capturas-readme.js` y
