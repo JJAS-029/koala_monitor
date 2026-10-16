@@ -235,6 +235,7 @@
     if (a === 'pausaActiva') return pausaActiva(datosAccion.pausaActiva || {});
     if (a === 'tomarAgua') return tomarAgua(datosAccion.tomarAgua || {});
     if (a === 'logro') return festejarLogro(datosAccion.logro || {});
+    if (a === 'alarma') return sonarAlarma(datosAccion.alarma || {});
     if (a === 'visitaPrueba') { visita = null; proximaVisita = 0; return descansar(); }
     if (a === 'pedirAtencion') return saltar();
     if (a === 'errores0') return barrer(datosAccion.errores0 || {});
@@ -671,6 +672,34 @@
       esperar(1.6, { ini() { ponerPose('frente'); k.brazos = 'arriba-der'; k.sosteniendo = 'trofeo'; }, fin() { posturaBase(); } })
     );
   }
+  // Despertador: lo levanta sonando (tiembla) con el mensaje de la alarma.
+  function sonarAlarma(d) {
+    sonar('alarma');
+    const texto = '⏰ ' + (d.hora || '') + ' — ' + (d.mensaje || '¡Es hora!');
+    cola.push(
+      esperar(0.01, { ini() { posturaBase(); k.mirar = 0; k.texto = texto; k.sosteniendo = 'despertador'; k.brazos = 'arriba-der'; k.ojos = 'abiertos'; } }),
+      ...salto(12, 0.35, { ini() { ponerPose('estirado'); k.brazos = 'arriba-der'; k.sosteniendo = 'despertador'; k.texto = texto; } }),
+      esperar(3.2, {
+        ini() { ponerPose('frente'); k.brazos = 'arriba-der'; k.sosteniendo = 'despertador'; k.texto = texto; },
+        act(p, dt) {
+          k.timbre = Math.sin(k.t * 60) * 0.35; // el reloj vibra
+          if (Math.random() < dt * 6) particulas.push({ tipo: 'nota', x: k.x + 5 * C + azar(-6, 6), y: suelo - 13 * C, vx: azar(-15, 15), vy: -azar(15, 30), vida: 0, max: 0.9 });
+        },
+        fin() { k.timbre = 0; },
+      }),
+      esperar(1.2, { ini() { k.sosteniendo = null; k.brazos = 'saludo'; k.ojos = 'felices'; k.texto = texto; }, fin() { posturaBase(); } })
+    );
+  }
+  function despertador(cx, cy) {
+    const prev = S; S = { ox: cx + (k.timbre || 0) * C, oy: cy, sx: 1, sy: 1 };
+    cel(-1.8, -3, 3.6, 3, COL.rojo); cel(-1.5, -2.7, 3, 2.4, COL.blanco); // caja y carátula
+    cel(-0.15, -2.4, 0.3, 1.1, COL.negro); cel(-0.15, -1.45, 1, 0.3, COL.negro); // manecillas
+    cel(-2.2, -3.7, 1.4, 0.9, '#FFD34D'); cel(0.8, -3.7, 1.4, 0.9, '#FFD34D'); // campanas
+    cel(-1.4, 0, 0.5, 0.6, COL.borde); cel(0.9, 0, 0.5, 0.6, COL.borde); // patas
+    S = prev;
+  }
+  const G_NOTA = ['..XX', '..X.', '..X.', 'XXX.', 'XX..'];
+
   function paraguas() {
     cola.push(esperar(3, { libre: true, ini() { k.texto = 'Afuera llueve ☔'; k.sosteniendo = 'paraguas'; k.brazos = 'arriba-der'; k.mirar = -1; }, fin() { k.sosteniendo = null; k.brazos = 'normal'; } }));
   }
@@ -684,12 +713,13 @@
 
   // ---------- Sonidos (WebAudio, sin archivos) ----------
   let audio = null;
-  const TONOS = { listo: [660, 880], pomodoro: [523, 659, 784], commit: [784, 988], logro: [523, 659, 784, 1047], fallo: [330, 247] };
+  const TONOS = { alarma: [988, 0, 988, 0, 988, 0, 988], listo: [660, 880], pomodoro: [523, 659, 784], commit: [784, 988], logro: [523, 659, 784, 1047], fallo: [330, 247] };
   function sonar(tipo) {
     if (!est.sonidos || typeof AudioContext === 'undefined') return;
     try {
       audio = audio || new AudioContext();
       (TONOS[tipo] || [660]).forEach((f, i) => {
+        if (!f) return; // silencio entre timbres
         const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + i * 0.12;
         o.type = 'square'; o.frequency.value = f;
         g.gain.setValueAtTime(0.04, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
@@ -1368,6 +1398,7 @@
       else if (q.tipo === 'burbuja') rect(q.x, q.y, 2, 2, COL.vidrio, a);
       else if (q.tipo === 'miga') rect(q.x, q.y, 2, 2, COL.hoja, a);
       else if (q.tipo === 'gota') rect(q.x, q.y, 2, 3, q.color, a);
+      else if (q.tipo === 'nota') glifo(G_NOTA, q.x, q.y, 1.5, COL.ambar, a);
       else if (q.tipo === 'fuego') rect(q.x, q.y, 2, 2, q.color, a);
       else if (q.tipo === 'bit') glifo(q.uno ? G_UNO : G_CERO, q.x, q.y, 1.5, COL.verde, a * 0.5);
       else if (q.tipo === 'polvo') rect(q.x, q.y, 3, 2, '#B9AE95', a * 0.8);
@@ -1459,6 +1490,7 @@
     if (k.sosteniendo === 'taza') taza(S.ox + 6.3 * C * S.sx, S.oy - 5.6 * C * S.sy);
     if (k.sosteniendo === 'vaso') vaso(S.ox + 6.3 * C * S.sx, S.oy - 5.6 * C * S.sy, k.nivelVaso == null ? 1 : k.nivelVaso);
     if (k.sosteniendo === 'torta') torta(S.ox, S.oy - 4.6 * C * S.sy, k.mordidas == null ? 3 : k.mordidas);
+    if (k.sosteniendo === 'despertador') despertador(S.ox + 5 * C * S.sx, S.oy - 10.4 * C * S.sy);
     if (k.sosteniendo === 'trofeo') trofeo(S.ox + 5 * C * S.sx, S.oy - 10.6 * C * S.sy);
     if (k.sosteniendo === 'paraguas') paraguasDibujo(S.ox + 5 * C * S.sx, S.oy - 10.4 * C * S.sy);
     if (k.sosteniendo === 'abanico') abanico(S.ox + 6.3 * C * S.sx, S.oy - 6 * C * S.sy);

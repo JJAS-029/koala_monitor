@@ -117,6 +117,11 @@ baila con el mensaje del commit; con cada **push** lanza un cohete. Cada uno sub
 - **Arrastrar**: carga al koala con el mouse y suéltalo (cae aplastado); arrastra la rama de la
   esquina para darle de comer donde la sueltes. Un clic sin arrastrar lo mima.
 
+## Alarmas
+En la pestaña **Mascota** pon una hora, un mensaje y si se repite (una vez, diaria, lunes a viernes), o usa
+*Koala científico: nueva alarma* para elegir días. A esa hora el koala saca su **despertador** y te llega
+una notificación con *Posponer 5 min*. *Koala científico: ver alarmas* las enciende, apaga o borra.
+
 ## El laboratorio a lo largo del día
 - **Ventana**: el cielo cambia con la hora (amanecer, día, atardecer, noche con luna y estrellas).
 - **Clima y termómetro**: con *Koala científico: elegir ciudad del clima* (o el botón de la pestaña

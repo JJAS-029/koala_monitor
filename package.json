@@ -2,7 +2,7 @@
   "name": "koala-cientifico",
   "displayName": "Koala científico",
   "description": "Mascota koala de laboratorio que trabaja contigo y mide tu uso de Claude Code: límites de sesión y semana, ritmo, costo equivalente, pomodoro, git y servidor.",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "publisher": "jjas-029",
   "license": "MIT",
   "icon": "media/icono.png",
@@ -110,6 +110,14 @@
       {
         "command": "koalaCientifico.elegirCiudad",
         "title": "Koala científico: elegir ciudad del clima"
+      },
+      {
+        "command": "koalaCientifico.nuevaAlarma",
+        "title": "Koala científico: nueva alarma"
+      },
+      {
+        "command": "koalaCientifico.alarmas",
+        "title": "Koala científico: ver alarmas"
       }
     ],
     "configuration": {

@@ -219,6 +219,27 @@
     return tarjeta('Huella estimada', html);
   }
 
+  // ---------- Alarmas (pestaña Mascota) ----------
+  function pintarAlarmas() {
+    const lista = est.alarmas || [];
+    pintar('alarmas-lista', lista.length ? lista.map((a) =>
+      '<div class="alarma' + (a.activa ? '' : ' apagada') + '">' +
+      '<button data-alarma-alternar="' + esc(a.id) + '" title="' + (a.activa ? 'Apagar' : 'Encender') + '">' + (a.activa ? '⏰' : '💤') + '</button>' +
+      '<span class="hora">' + esc(a.hora) + '</span><span class="msg" title="' + esc(a.mensaje) + '">' + esc(a.mensaje) + '</span>' +
+      '<span class="rep">' + esc(a.texto) + '</span>' +
+      '<button data-alarma-borrar="' + esc(a.id) + '" title="Borrar">×</button></div>').join('')
+      : '<div class="nota">Sin alarmas. Pon una hora y un mensaje: el koala te avisa con su despertador.</div>');
+  }
+  const btnAlarma = $('alarma-agregar');
+  if (btnAlarma) btnAlarma.addEventListener('click', () => {
+    const hora = ($('alarma-hora') || {}).value, msg = $('alarma-msg'), rep = ($('alarma-rep') || {}).value;
+    if (!hora) { if ($('alarma-hora')) $('alarma-hora').focus(); return; }
+    vscode.postMessage({ tipo: 'crearAlarma', hora, mensaje: msg ? msg.value : '', repeticion: rep || 'una' });
+    if (msg) msg.value = '';
+  });
+  const msgAlarma = $('alarma-msg');
+  if (msgAlarma) msgAlarma.addEventListener('keydown', (e) => { if (e.key === 'Enter' && btnAlarma) btnAlarma.click(); });
+
   // ---------- Hoy ----------
   function pintarHoy() {
     const h = est.hoy || {};
@@ -329,6 +350,8 @@
     else if (t.getAttribute('data-quitar')) vscode.postMessage({ tipo: 'quitarServicio', url: t.getAttribute('data-quitar') });
     else if (t.getAttribute('data-cmd')) vscode.postMessage({ tipo: 'comando', id: t.getAttribute('data-cmd') });
     else if (t.getAttribute('data-msg')) vscode.postMessage({ tipo: t.getAttribute('data-msg') });
+    else if (t.getAttribute('data-alarma-alternar')) vscode.postMessage({ tipo: 'alternarAlarma', id: t.getAttribute('data-alarma-alternar') });
+    else if (t.getAttribute('data-alarma-borrar')) vscode.postMessage({ tipo: 'borrarAlarma', id: t.getAttribute('data-alarma-borrar') });
   });
 
   window.addEventListener('message', (e) => {
@@ -336,6 +359,7 @@
     if (!m || m.tipo !== 'estado') return;
     est = m;
     pintarAlertas();
+    pintarAlarmas();
     pintarConsumo();
     pintarHoy();
     pintarSistema();

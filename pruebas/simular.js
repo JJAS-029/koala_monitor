@@ -612,6 +612,17 @@ escena('31-animo-y-clima', 64, (e, tomar) => {
   verificar(paraguas, 'con lluvia saca el paraguas');
 });
 
+escena('32-alarma', 71, (e, tomar) => {
+  e.enviar(estado({ trabajando: true }));
+  e.avanzar(3); tomar();
+  e.enviar({ tipo: 'accion', accion: 'alarma', datos: { hora: '14:30', mensaje: 'Junta con el equipo' } });
+  let visto = false;
+  for (let i = 0; i < 14; i++) { e.avanzar(0.4); tomar(); visto = visto || /14:30 — Junta con el equipo/.test(e.elementos['estado'].textContent); }
+  verificar(visto, 'deja la laptop y suena el despertador con el mensaje');
+  e.avanzar(4);
+  verificar(e.koala.k.modo === 'trabajo', 'después vuelve a trabajar');
+});
+
 if (errores.length) {
   console.log(`\n${errores.length} verificación(es) fallaron`);
   process.exit(1);

@@ -86,6 +86,13 @@ const cargar = Module._load;
 Module._load = function (req, ...r) { return req === 'vscode' ? vscodeFalso : cargar.call(this, req, ...r); };
 
 const memoria = new Map();
+if (process.env.DEMO) {
+  memoria.set('koala.alarmas', [
+    { id: 'a1', hora: '09:00', mensaje: 'Revisar pendientes del día', repeticion: 'laborables', activa: true, ultimaVez: null },
+    { id: 'a2', hora: '14:30', mensaje: 'Junta con el equipo', repeticion: [2, 4], activa: true, ultimaVez: null },
+    { id: 'a3', hora: '18:00', mensaje: 'Subir los cambios', repeticion: 'diaria', activa: false, ultimaVez: null },
+  ]);
+}
 const ctx = {
   extensionUri: { fsPath: RAIZ }, extensionPath: RAIZ, subscriptions: [],
   globalState: { get: (k, d) => (memoria.has(k) ? memoria.get(k) : d), update: async (k, v) => memoria.set(k, v), setKeysForSync() {} },

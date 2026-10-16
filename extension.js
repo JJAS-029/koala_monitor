@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const monitor = require('./monitor');
 const costos = require('./costos');
 const { crearRutina } = require('./rutina');
+const { crearAlarmas } = require('./alarmas');
 const https = require('https');
 const { execFile, execFileSync } = require('child_process');
 
@@ -65,6 +66,7 @@ let gitInfo = null;
 let diag = { errores: 0, avisos: 0, archivos: 0 };
 let climaActual = null;
 let rutina = null;
+let alarmas = null;
 let ventanaPrevia = null; // { reinicio, pct } de la sesión de 5 h, para detectar cuándo cierra
 
 // ---------- Pomodoro ----------
@@ -801,6 +803,7 @@ function enviarEstado() {
     temporada: temporada(),
     clima: climaActual,
     rutina: rutina ? rutina.estado() : null,
+    alarmas: alarmas ? alarmas.lista() : [],
     sonidos: config().get('sonidos', false),
     visitantes: config().get('visitantes', true),
   });
@@ -868,6 +871,64 @@ async function medirClima() {
   climaActual = nuevo;
 }
 let reintentoClima = null;
+
+// ---------- Alarmas ----------
+function alSonarAlarma(a, atraso, pospuesta) {
+  const texto = `⏰ ${a.hora} — ${a.mensaje}` + (atraso ? ` (hace ${atraso} min)` : '') + (pospuesta ? ' (pospuesta)' : '');
+  animar('alarma', { hora: a.hora, mensaje: a.mensaje });
+  vscode.window.showWarningMessage(`🐨 ${texto}`, 'Posponer 5 min', 'Listo').then((r) => {
+    if (r === 'Posponer 5 min') alarmas.posponer(a, 5);
+  });
+  enviarEstado();
+}
+function crearAlarma(datos) {
+  try {
+    const a = alarmas.crear(datos);
+    vscode.window.showInformationMessage(`🐨 Alarma lista: ${a.hora} — ${a.mensaje}`);
+  } catch (e) {
+    vscode.window.showErrorMessage(`🐨 ${e.message}`);
+  }
+  enviarEstado();
+}
+async function nuevaAlarmaComando() {
+  const hora = await vscode.window.showInputBox({
+    prompt: '¿A qué hora? (24 h, HH:MM)', placeHolder: '14:30',
+    validateInput: (t) => (/^\d{1,2}:\d{2}$/.test(t.trim()) ? null : 'Escribe la hora como HH:MM, por ejemplo 09:15'),
+  });
+  if (!hora) return;
+  const mensaje = await vscode.window.showInputBox({ prompt: '¿Qué te recuerdo?', placeHolder: 'Junta con el equipo' });
+  if (mensaje === undefined) return;
+  const rep = await vscode.window.showQuickPick([
+    { label: 'Solo una vez', valor: 'una' }, { label: 'Todos los días', valor: 'diaria' },
+    { label: 'Lunes a viernes', valor: 'laborables' }, { label: 'Elegir días…', valor: 'elegir' },
+  ], { placeHolder: '¿Cuándo se repite?' });
+  if (!rep) return;
+  let repeticion = rep.valor;
+  if (repeticion === 'elegir') {
+    const dias = await vscode.window.showQuickPick(
+      ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'].map((d, i) => ({ label: d, i })),
+      { canPickMany: true, placeHolder: 'Días de la semana' });
+    if (!dias || !dias.length) return;
+    repeticion = dias.map((d) => d.i);
+  }
+  crearAlarma({ hora: hora.trim(), mensaje, repeticion });
+}
+async function verAlarmasComando() {
+  const lista = alarmas.lista();
+  if (!lista.length) {
+    const r = await vscode.window.showInformationMessage('🐨 No tienes alarmas.', 'Crear una');
+    if (r) nuevaAlarmaComando();
+    return;
+  }
+  const r = await vscode.window.showQuickPick(lista.map((a) => ({
+    label: `${a.activa ? '⏰' : '💤'} ${a.hora} — ${a.mensaje}`, description: a.texto, a,
+  })), { placeHolder: 'Elige una alarma para encenderla, apagarla o borrarla' });
+  if (!r) return;
+  const accion = await vscode.window.showQuickPick([r.a.activa ? 'Apagar' : 'Encender', 'Borrar'], { placeHolder: `${r.a.hora} — ${r.a.mensaje}` });
+  if (accion === 'Borrar') alarmas.borrar(r.a.id);
+  else if (accion) alarmas.alternar(r.a.id);
+  enviarEstado();
+}
 
 async function elegirCiudad() {
   const texto = await vscode.window.showInputBox({
@@ -939,6 +1000,9 @@ class ProveedorVista {
       else if (msg.tipo === 'agregarServicio') agregarServicio();
       else if (msg.tipo === 'activarApi') activarApi();
       else if (msg.tipo === 'elegirCiudad') elegirCiudad();
+      else if (msg.tipo === 'crearAlarma') crearAlarma(msg);
+      else if (msg.tipo === 'alternarAlarma') { alarmas.alternar(msg.id); enviarEstado(); }
+      else if (msg.tipo === 'borrarAlarma') { alarmas.borrar(msg.id); enviarEstado(); }
       else if (msg.tipo === 'agua') { if (rutina) rutina.agua(); enviarEstado(); }
       else if (msg.tipo === 'visita') { if (rutina) rutina.alVisita(); }
       else if (msg.tipo === 'consultarApi') consultarAnthropic(true);
@@ -1002,6 +1066,19 @@ function htmlVista(webview) {
   .logros { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
   .logro { text-align: center; font-size: 20px; padding: 4px 0; border-radius: 4px; background: var(--vscode-editorWidget-background, #8881); }
   .logro.bloqueado { filter: grayscale(1); opacity: .3; }
+  .alarmas-caja { border-top: 1px solid var(--vscode-editorWidget-border, #8884); padding: 6px 0 8px; }
+  .tit-alarmas { font-size: 11px; font-weight: 600; opacity: .85; margin-bottom: 4px; }
+  .alarma { display: grid; grid-template-columns: 18px 44px 1fr auto 16px; gap: 6px; align-items: center; font-size: 11px; margin: 3px 0; }
+  .alarma.apagada { opacity: .45; }
+  .alarma .hora { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .alarma .msg { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .alarma .rep { opacity: .65; }
+  .alarma button { border: none; background: none; color: var(--vscode-foreground); cursor: pointer; padding: 0; font: inherit; }
+  .alarma-form { display: grid; grid-template-columns: 76px 1fr 84px 24px; gap: 4px; margin-top: 4px; }
+  .alarma-form input, .alarma-form select { font: inherit; font-size: 11px; min-width: 0; padding: 2px 4px;
+    color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, #8884); border-radius: 2px; }
+  .alarma-form button { font: inherit; border: none; border-radius: 3px; cursor: pointer;
+    color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
   .pomo { border-top: 1px solid var(--vscode-editorWidget-border, #8884); padding: 6px 0 8px; }
   .pomo .barra > i { width: 0; background: var(--vscode-charts-red, #e0524d); transition: width 1s linear; }
   .pomo .barra > i.descanso { background: var(--vscode-charts-green, #5bc46a); }
@@ -1083,6 +1160,18 @@ function htmlVista(webview) {
     <button data-accion="dormir" id="btn-dormir">Dormir</button>
   </div>
   <button class="boton-agua" id="btn-agua" title="Suma un vaso a tu meta del día">💧 Tomé un vaso de agua</button>
+  <div class="alarmas-caja">
+    <div class="tit-alarmas">Alarmas</div>
+    <div id="alarmas-lista"></div>
+    <div class="alarma-form">
+      <input type="time" id="alarma-hora" aria-label="Hora">
+      <input type="text" id="alarma-msg" placeholder="¿Qué te recuerdo?" maxlength="80" aria-label="Mensaje">
+      <select id="alarma-rep" aria-label="Repetición">
+        <option value="una">Una vez</option><option value="diaria">Diaria</option><option value="laborables">Lun–vie</option>
+      </select>
+      <button id="alarma-agregar" title="Agregar alarma">+</button>
+    </div>
+  </div>
   <div class="pomo">
     <div class="probeta">
       <div class="tit"><span id="pomo-fase">Pomodoro</span><b id="pomo-reloj">25:00</b></div>
@@ -1319,7 +1408,7 @@ async function configurarMonitor(yaConfirmado) {
 // ---------- Activación ----------
 function activate(ctx) {
   contexto = ctx;
-  ctx.globalState.setKeysForSync([CLAVE_ESTADO, 'koala.logros', 'koala.contadores']); // ánimo, saciedad y energía viajan con Settings Sync
+  ctx.globalState.setKeysForSync([CLAVE_ESTADO, 'koala.logros', 'koala.contadores', 'koala.alarmas']); // ánimo, saciedad y energía viajan con Settings Sync
   cargarEstado();
 
   ctx.subscriptions.push(vscode.window.registerWebviewViewProvider('koalaCientifico.panel', new ProveedorVista(), {
@@ -1415,6 +1504,12 @@ function activate(ctx) {
   ctx.subscriptions.push({ dispose() { clearInterval(relojRutina); clearInterval(relojClima); } });
   comando('koalaCientifico.agua', () => { rutina.agua(); enviarEstado(); });
   comando('koalaCientifico.elegirCiudad', elegirCiudad);
+  alarmas = crearAlarmas({ contexto: ctx, alSonar: alSonarAlarma });
+  comando('koalaCientifico.nuevaAlarma', nuevaAlarmaComando);
+  comando('koalaCientifico.alarmas', verAlarmasComando);
+  const relojAlarmas = setInterval(() => alarmas.revisar(), 5000);
+  setTimeout(() => alarmas.revisar(), 6000); // las atrasadas, cuando el panel ya pudo abrir
+  ctx.subscriptions.push({ dispose() { clearInterval(relojAlarmas); } });
   // Commits y pushes: el koala festeja (y se alegra: más ánimo).
   monitor.vigilarGit(alEventoGit).then((d) => ctx.subscriptions.push(d), () => {});
   const relojUso = setInterval(escanearTranscripciones, 60 * 1000);

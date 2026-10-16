@@ -1,5 +1,12 @@
 # Registro de cambios
 
+## 1.3.0
+- **Alarmas**: a la hora que quieras, con mensaje y repetición (una vez, diaria, lunes a viernes o días
+  elegidos). El koala saca un despertador que suena y llega una notificación con *Posponer 5 min*. Si VS Code
+  estaba cerrado, avisa al abrir (hasta 60 min tarde). Se crean en la pestaña Mascota o con los comandos
+  *nueva alarma* / *ver alarmas*; viajan con Settings Sync.
+- Pruebas automáticas de la lógica con `node --test pruebas/*.test.js`.
+
 ## 1.2.1
 - Corrige el clima con la ciudad escrita completa ("Toluca de Lerdo, Estado de México, México"): se busca por
   el nombre y la región elige entre homónimos.
