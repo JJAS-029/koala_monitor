@@ -1,4 +1,4 @@
-// Koala científico: pestañas de estadísticas (Consumo, Hoy, Sistema) y alertas.
+// Koala científico: tarjetas de datos en carruseles (cada carrusel muestra la que elijas) y alertas.
 // Se apoya en koala.js, que abre el canal con la extensión (window.koalaVscode).
 // Textos: T('texto en español', ...) traduce con el diccionario que inyecta la extensión (window.koalaT).
 (function () {
@@ -54,9 +54,6 @@
   function cifra(valor, etiqueta) {
     return '<div class="cifra"><b>' + esc(valor) + '</b><span>' + esc(etiqueta) + '</span></div>';
   }
-  function tarjeta(titulo, cuerpo) {
-    return '<div class="tarjeta"><h3>' + esc(titulo) + '</h3>' + cuerpo + '</div>';
-  }
   function ranking(obj, n, formato, clase) {
     const filas = Object.entries(obj || {}).sort((a, b) => b[1] - a[1]).slice(0, n);
     if (!filas.length) return '<div class="nota">' + T('Sin datos todavía.') + '</div>';
@@ -71,33 +68,161 @@
     el.querySelectorAll('[data-o]').forEach((i) => { i.style.opacity = i.getAttribute('data-o'); });
   }
 
-  // ---------- Pestañas ----------
-  function elegirPestana(nombre) {
-    document.querySelectorAll('[data-pestana]').forEach((b) => b.classList.toggle('sel', b.getAttribute('data-pestana') === nombre));
-    document.querySelectorAll('.vista').forEach((v) => v.classList.toggle('sel', v.id === 'v-' + nombre));
-    try { vscode.setState(Object.assign({}, vscode.getState() || {}, { pestana: nombre })); } catch (e) { /* sin estado */ }
+  // ---------- Carruseles ----------
+  // Todas las tarjetas viven en #deposito; cada carrusel muestra una. Elegir una que ya está en otro carrusel las intercambia.
+  const GRUPOS = [
+    [T('Mascota'), [['mascota', T('Mascota')], ['alarmas', T('Alarmas')], ['pomodoro', T('Pomodoro')]]],
+    [T('Consumo'), [['limites', T('Límites de tu plan')], ['fuente', T('Fuente del dato')], ['ritmo', T('Ritmo y proyección')],
+      ['costo', T('Costo equivalente en la API')], ['huella', T('Huella estimada')], ['conversacion', T('Conversación actual')],
+      ['cache', T('Eficiencia de caché (hoy)')]]],
+    [T('Hoy'), [['resumen', T('Resumen del día')], ['proyectos', T('Por proyecto')], ['modelos', T('Por modelo')],
+      ['herramientas', T('Herramientas de Claude')], ['git', 'Git'], ['problemas', T('Problemas del proyecto')],
+      ['calor', T('Uso de Claude por hora (7 días)')], ['logros', T('Logros')]]],
+    [T('Sistema'), [['servidor', T('Servidor')], ['clima', T('Clima')], ['servicios', T('Servicios')]]],
+  ];
+  const TARJETAS = [].concat(...GRUPOS.map((g) => g[1]));
+  const IDS = TARJETAS.map((x) => x[0]);
+  const NOMBRE = Object.fromEntries(TARJETAS);
+  const INICIO = ['mascota', 'limites', 'resumen'];
+  const MAX_CARRUSELES = 8;
+  let carruseles = null; // ids de la tarjeta que muestra cada carrusel
+  let conAlerta = new Set();
+
+  const valido = (lista) => Array.isArray(lista) && lista.length > 0 && lista.every((x) => IDS.includes(x));
+  function guardar(enviar) {
+    try { vscode.setState(Object.assign({}, vscode.getState() || {}, { carruseles })); } catch (e) { /* sin estado */ }
+    if (enviar) vscode.postMessage({ tipo: 'carruseles', valor: carruseles });
   }
-  document.querySelectorAll('[data-pestana]').forEach((b) => {
-    b.addEventListener('click', () => elegirPestana(b.getAttribute('data-pestana')));
+  function nodo(id) { return document.querySelector('.tj[data-tj="' + id + '"]'); }
+
+  function armar(animar) {
+    const caja = $('carruseles'), dep = $('deposito');
+    if (!caja || !dep) return;
+    // devuelve las tarjetas al depósito y rehace los carruseles
+    document.querySelectorAll('#carruseles .tj').forEach((n) => dep.appendChild(n));
+    caja.innerHTML = '';
+    carruseles.forEach((id, i) => {
+      const c = document.createElement('div');
+      c.className = 'carrusel';
+      c.setAttribute('data-i', i);
+      const opciones = GRUPOS.map((g) => '<optgroup label="' + esc(g[0]) + '">' +
+        g[1].map((x) => '<option value="' + x[0] + '"' + (x[0] === id ? ' selected' : '') + '>' + esc(x[1]) +
+          (conAlerta.has(x[0]) ? ' •' : '') + '</option>').join('') + '</optgroup>').join('');
+      c.innerHTML = '<div class="car-cab">' +
+        '<button class="flecha" data-car="prev" title="' + esc(T('Anterior')) + '" aria-label="' + esc(T('Anterior')) + '">‹</button>' +
+        '<select class="car-sel" data-car="sel" title="' + esc(T('Elige qué ver aquí')) + '" aria-label="' + esc(T('Elige qué ver aquí')) + '">' + opciones + '</select>' +
+        '<span class="car-pos">' + (IDS.indexOf(id) + 1) + '/' + IDS.length + '</span>' +
+        '<button class="flecha" data-car="next" title="' + esc(T('Siguiente')) + '" aria-label="' + esc(T('Siguiente')) + '">›</button>' +
+        (carruseles.length > 1 ? '<button data-car="quitar" title="' + esc(T('Quitar este carrusel')) + '" aria-label="' + esc(T('Quitar este carrusel')) + '">×</button>' : '<span></span>') +
+        '</div><div class="car-cuerpo"></div><div class="car-puntos">' +
+        IDS.map((x) => '<i class="' + (x === id ? 'sel' : conAlerta.has(x) ? 'alerta-punto' : '') + '"></i>').join('') + '</div>';
+      const cuerpo = c.querySelector('.car-cuerpo');
+      const n = nodo(id);
+      if (n) cuerpo.appendChild(n);
+      if (animar && animar.i === i) cuerpo.classList.add(animar.dir > 0 ? 'entra-der' : 'entra-izq');
+      caja.appendChild(c);
+    });
+    const agregar = $('car-agregar');
+    if (agregar) agregar.disabled = carruseles.length >= MAX_CARRUSELES;
+  }
+
+  // Muestra `id` en el carrusel i; si ya se veía en otro, los intercambia.
+  function mostrar(i, id, dir) {
+    const otro = carruseles.indexOf(id);
+    if (otro === i) return;
+    if (otro >= 0) carruseles[otro] = carruseles[i];
+    carruseles[i] = id;
+    guardar(true);
+    armar({ i, dir: dir || 1 });
+  }
+  // Flechas: la siguiente tarjeta que no se esté viendo en otro carrusel.
+  function mover(i, dir) {
+    let k = IDS.indexOf(carruseles[i]);
+    for (let n = 0; n < IDS.length; n++) {
+      k = (k + dir + IDS.length) % IDS.length;
+      if (!carruseles.includes(IDS[k])) return mostrar(i, IDS[k], dir);
+    }
+  }
+  function agregarCarrusel() {
+    if (carruseles.length >= MAX_CARRUSELES) return;
+    const libre = IDS.find((x) => !carruseles.includes(x));
+    if (!libre) return;
+    carruseles.push(libre);
+    guardar(true);
+    armar();
+  }
+  // Lleva una tarjeta a la vista (p. ej. al tocar una alerta): si no se ve, la pone en el último carrusel.
+  function irA(id) {
+    if (!IDS.includes(id)) return;
+    let i = carruseles.indexOf(id);
+    if (i < 0) { i = carruseles.length - 1; mostrar(i, id, 1); }
+    const c = document.querySelector('.carrusel[data-i="' + i + '"]');
+    if (c && c.scrollIntoView) c.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  document.addEventListener('click', (e) => {
+    const b = e.target && e.target.closest ? e.target.closest('[data-car]') : null;
+    if (!b || b.tagName === 'SELECT') return;
+    const i = Number(b.closest('.carrusel').getAttribute('data-i'));
+    const que = b.getAttribute('data-car');
+    if (que === 'prev') mover(i, -1);
+    else if (que === 'next') mover(i, 1);
+    else if (que === 'quitar' && carruseles.length > 1) { carruseles.splice(i, 1); guardar(true); armar(); }
   });
+  document.addEventListener('change', (e) => {
+    const sel = e.target;
+    if (!sel || sel.getAttribute('data-car') !== 'sel') return;
+    const i = Number(sel.closest('.carrusel').getAttribute('data-i'));
+    mostrar(i, sel.value, IDS.indexOf(sel.value) >= IDS.indexOf(carruseles[i]) ? 1 : -1);
+  });
+  // Teclado: ← → con el foco en la cabecera de un carrusel.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const cab = e.target && e.target.closest ? e.target.closest('.car-cab') : null;
+    if (!cab || e.target.tagName === 'SELECT') return;
+    e.preventDefault();
+    const i = Number(cab.closest('.carrusel').getAttribute('data-i'));
+    mover(i, e.key === 'ArrowRight' ? 1 : -1);
+    const nuevo = document.querySelector('.carrusel[data-i="' + i + '"] [data-car="' + (e.key === 'ArrowRight' ? 'next' : 'prev') + '"]');
+    if (nuevo) nuevo.focus();
+  });
+  // Deslizar con el mouse o el dedo sobre el cuerpo (no sobre botones ni campos).
+  let arrastre = null;
+  document.addEventListener('pointerdown', (e) => {
+    const cuerpo = e.target && e.target.closest ? e.target.closest('.car-cuerpo') : null;
+    if (!cuerpo || e.target.closest('button, input, select, textarea, a')) return;
+    arrastre = { x: e.clientX, y: e.clientY, i: Number(cuerpo.closest('.carrusel').getAttribute('data-i')) };
+  });
+  document.addEventListener('pointerup', (e) => {
+    if (!arrastre) return;
+    const dx = e.clientX - arrastre.x, dy = e.clientY - arrastre.y;
+    const i = arrastre.i;
+    arrastre = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > 1.5 * Math.abs(dy)) mover(i, dx < 0 ? 1 : -1);
+  });
+  const btnAgregar = $('car-agregar');
+  if (btnAgregar) btnAgregar.addEventListener('click', agregarCarrusel);
+  const btnRest = $('car-restablecer');
+  if (btnRest) btnRest.addEventListener('click', () => { carruseles = INICIO.slice(); guardar(true); armar(); });
+
   try {
-    const guardada = (vscode.getState() || {}).pestana;
-    if (guardada) elegirPestana(guardada);
+    const guardados = (vscode.getState() || {}).carruseles;
+    if (valido(guardados)) carruseles = guardados.slice();
   } catch (e) { /* sin estado */ }
+  const desdeExtension = !!carruseles;
+  let cargadoDeExtension = false;
+  if (!carruseles) carruseles = INICIO.slice();
+  armar();
+  // Para la vista previa y pruebas: fijar los carruseles a mano.
+  window.koalaCarruseles = { fijar(lista) { if (valido(lista)) { carruseles = lista.slice(); armar(); } }, tarjetas: () => IDS.slice() };
 
   // ---------- Alertas ----------
+  // Tocar una alerta lleva su tarjeta a la vista; las tarjetas con alerta llevan un punto rojo en el carrusel.
   function pintarAlertas() {
     const a = (est.alertas || []).slice(0, 2);
-    pintar('alertas', a.map((x) => '<div class="alerta n' + x.nivel + '">' + esc(x.texto) + '</div>').join(''));
-    // punto rojo en la pestaña de cada alerta
-    const marca = { consumo: false, hoy: false, sistema: false };
-    for (const x of est.alertas || []) marca[x.pestana || 'sistema'] = true;
-    document.querySelectorAll('[data-pestana]').forEach((b) => {
-      const p = b.getAttribute('data-pestana');
-      let punto = b.querySelector('.punto');
-      if (marca[p] && !punto) { punto = document.createElement('span'); punto.className = 'punto'; b.appendChild(punto); }
-      if (!marca[p] && punto) punto.remove();
-    });
+    pintar('alertas', a.map((x) => '<div class="alerta n' + x.nivel + '"' + (x.tarjeta ? ' data-ir="' + esc(x.tarjeta) + '" title="' + esc(T('Ver {0}', NOMBRE[x.tarjeta] || '')) + '"' : '') + '>' + esc(x.texto) + '</div>').join(''));
+    const nuevas = new Set((est.alertas || []).map((x) => x.tarjeta).filter(Boolean));
+    if ([...nuevas].join() !== [...conAlerta].join()) { conAlerta = nuevas; armar(); }
   }
 
   // ---------- Consumo ----------
@@ -141,13 +266,12 @@
       '<div class="nota">' + (cache >= 80 ? T('Muy eficiente: conversaciones largas y con contexto estable.') :
         cache >= 50 ? T('Aceptable.') : T('Baja: muchas conversaciones nuevas o cambios de contexto.')) + '</div>';
 
-    pintar('consumo-extra',
-      tarjetaFuente(u) +
-      tarjeta(T('Ritmo y proyección'), ritmo + cifrasRitmo) +
-      tarjetaCosto() +
-      tarjetaHuella() +
-      tarjeta(T('Conversación actual'), conv) +
-      tarjeta(T('Eficiencia de caché (hoy)'), eficiencia));
+    pintar('c-fuente', tarjetaFuente(u));
+    pintar('c-ritmo', ritmo + cifrasRitmo);
+    pintar('c-costo', tarjetaCosto());
+    pintar('c-huella', tarjetaHuella());
+    pintar('c-conversacion', conv);
+    pintar('c-cache', eficiencia);
   }
 
   function dinero(v) {
@@ -172,12 +296,12 @@
       html += '<div class="nota">' + T('Puedes pedir el % real directo a Anthropic con la sesión de Claude Code de este equipo (lo mismo que hace el panel de Claude).') + '</div>' +
         '<button class="boton-chico" data-msg="activarApi">' + T('Usar dato directo de Anthropic') + '</button>';
     }
-    return tarjeta(T('Fuente del dato'), html);
+    return html;
   }
 
   function tarjetaCosto() {
     const c = est.costos;
-    if (!c) return '';
+    if (!c) return '<div class="nota">' + T('Sin datos todavía.') + '</div>';
     const mensual = (c.mes.usd / c.diasMes) * 30;
     let html = '<div class="cifras">' +
       cifra(dinero(c.hoy.usd), T('hoy')) +
@@ -195,7 +319,7 @@
       html += '<div class="nota">' + T('A este paso, ~{0} al mes. Escribe lo que pagas en <code>koalaCientifico.costoPlanMensualUSD</code> para comparar.', dinero(mensual)) + '</div>';
     }
     html += '<div class="nota">' + T('Lo que costaría pagando por token con los precios de la API (entrada, salida, escritura y lectura de caché de cada modelo). Con una suscripción no se cobra así.') + '</div>';
-    return tarjeta(T('Costo equivalente en la API'), html);
+    return html;
   }
 
   function energia(wh) {
@@ -206,7 +330,7 @@
   }
   function tarjetaHuella() {
     const c = est.costos;
-    if (!c) return '';
+    if (!c) return '<div class="nota">' + T('Sin datos todavía.') + '</div>';
     const f = c.aguaMlPorWh;
     const vasos = (c.hoy.wh * f) / 250;
     const cargas = c.hoy.wh / 15; // un celular ≈ 15 Wh
@@ -220,10 +344,10 @@
       vasos >= 1 ? T('{0} vasos de agua', vasos.toFixed(1)) : T('{0} de agua', agua(c.hoy.wh * f)),
       cargas.toFixed(1), agua(c.hoy.wh * 0.5), agua(c.hoy.wh * 5)) + '</div>';
     html += '<div class="nota">' + T('Estimación, no medición: Anthropic no publica energía ni agua por modelo. Energía con factores por token (entrada 390, salida 1950, escritura 490 y lectura de caché 39 Wh por millón; S. Couch con datos de Epoch AI) y agua con {0} mL por Wh (enfriamiento + generación eléctrica; ajustable en <code>koalaCientifico.aguaMlPorWh</code>).', f) + '</div>';
-    return tarjeta(T('Huella estimada'), html);
+    return html;
   }
 
-  // ---------- Alarmas (pestaña Mascota) ----------
+  // ---------- Alarmas ----------
   function pintarAlarmas() {
     const lista = est.alarmas || [];
     pintar('alarmas-lista', lista.length ? lista.map((a) =>
@@ -248,14 +372,14 @@
   function pintarHoy() {
     const h = est.hoy || {};
     const p = est.pomodoro || {};
-    let html = tarjeta(T('Resumen del día'), '<div class="cifras">' +
+    pintar('c-resumen', '<div class="cifras">' +
       cifra(tokens(h.tokens || 0), T('tokens de Claude')) +
       cifra(String(h.mensajes || 0), T('respuestas')) +
       cifra(duracion(est.activoHoy || 0), T('activo en el editor')) +
       cifra(String(p.hoy || 0), T('pomodoros')) + '</div>');
-    html += tarjeta(T('Por proyecto'), ranking(h.proyectos, 5, tokens, ''));
-    html += tarjeta(T('Por modelo'), ranking(h.modelos, 4, tokens, 'morado'));
-    html += tarjeta(T('Herramientas de Claude'), ranking(h.herramientas, 6, (v) => v + '×', 'verde'));
+    pintar('c-proyectos', ranking(h.proyectos, 5, tokens, ''));
+    pintar('c-modelos', ranking(h.modelos, 4, tokens, 'morado'));
+    pintar('c-herramientas', ranking(h.herramientas, 6, (v) => v + '×', 'verde'));
 
     // git
     const repos = est.git;
@@ -275,10 +399,10 @@
       git += '<div class="repo">' + medalla + ' ' + (r.dias === 1 ? T('Racha de <b>1 día</b> con commits') : T('Racha de <b>{0} días</b> con commits', r.dias)) +
         (r.hoy ? '' : ' · ' + T('haz uno hoy para no romperla')) + '</div>';
     }
-    html += tarjeta('Git', git);
+    pintar('c-git', git);
 
     const d = est.diag || {};
-    html += tarjeta(T('Problemas del proyecto'), '<div class="cifras">' +
+    pintar('c-problemas', '<div class="cifras">' +
       cifra(String(d.errores || 0), T('errores')) + cifra(String(d.avisos || 0), T('advertencias')) +
       cifra(String(d.archivos || 0), T('archivos')) + '</div>' +
       '<button class="boton-chico" data-cmd="workbench.actions.view.problems">' + T('Ver problemas') + '</button>');
@@ -298,31 +422,29 @@
       });
     });
     calor += '</div>';
-    html += tarjeta(T('Uso de Claude por hora (7 días)'), calor);
+    pintar('c-calor', calor);
 
     // vitrina de logros
     const ru = est.rutina;
     if (ru) {
       const hechos = ru.logros.filter((l) => l.fecha).length;
-      html += tarjeta(T('Logros ({0} de {1})', hechos, ru.logros.length), '<div class="logros">' +
+      pintar('c-logros', '<div class="nota">' + T('{0} de {1} desbloqueados', hechos, ru.logros.length) + '</div><div class="logros">' +
         ru.logros.map((l) => '<div class="logro' + (l.fecha ? '' : ' bloqueado') + '" title="' +
           esc(l.nombre + ': ' + l.desc + (l.fecha ? ' · ' + new Date(l.fecha).toLocaleDateString(LOCALE) : ' ' + T('(pendiente)'))) + '">' +
           (l.fecha ? l.icono : '❔') + '</div>').join('') + '</div>' +
         '<div class="nota">💧 ' + T('Agua hoy: {0} de {1} vasos', ru.agua, ru.metaAgua) +
         (ru.diasSinErrores === 1 ? ' · ' + T('1 día sin errores') : ru.diasSinErrores > 1 ? ' · ' + T('{0} días sin errores', ru.diasSinErrores) : '') + '</div>');
     }
-    pintar('hoy', html);
   }
 
   // ---------- Sistema ----------
   const NOMBRE_CLIMA = { despejado: 'despejado', nublado: 'nublado', niebla: 'niebla', lluvia: 'lluvia', tormenta: 'tormenta', nieve: 'nieve' };
   function pintarSistema() {
     const s = est.sistema;
-    let html;
-    if (!s) html = tarjeta(T('Servidor'), '<div class="nota">' + T('Midiendo…') + '</div>');
+    if (!s) pintar('c-servidor', '<div class="nota">' + T('Midiendo…') + '</div>');
     else {
       const cpu = s.cpu;
-      html = tarjeta(T('Servidor') + ' · ' + s.host,
+      pintar('c-servidor', '<div class="nota">' + esc(s.host) + '</div>' +
         renglon(T('CPU ({0} núcleos)', s.nucleos), pct(cpu), cpu || 0, nivel(cpu || 0, 70, 90), T('Carga 1 min: {0}', s.carga.toFixed(2))) +
         renglon(T('Memoria'), bytes(s.memoria.usada) + ' / ' + bytes(s.memoria.total), s.memoria.pct, nivel(s.memoria.pct, 75, 90)) +
         s.discos.map((d) => renglon(T('Disco {0}', d.ruta), bytes(d.usada) + ' / ' + bytes(d.total), d.pct, nivel(d.pct, 80, 90))).join('') +
@@ -336,22 +458,23 @@
         '<div class="nota">' + T('Open-Meteo · se ve en la ventana y el termómetro del laboratorio') + '</div>'
       : '<div class="nota">' + (cl && cl.error ? '⚠ ' + esc(cl.error) + '. ' : '') +
         T('Elige tu ciudad para ver el clima real en la ventana y el termómetro (necesita internet). El koala no detecta tu ubicación por su cuenta.') + '</div>';
-    html += tarjeta(T('Clima'), cuerpoClima +
+    pintar('c-clima', cuerpoClima +
       '<button class="boton-chico" data-msg="elegirCiudad">' + (cl && !cl.error ? T('Cambiar ciudad') : T('Elegir ciudad')) + '</button>');
     const lista = est.servicios || [];
     const filas = lista.map((x) => '<div class="servicio" title="' + esc(x.url) + '"><span class="luz' + (x.ok ? '' : ' mal') + '"></span>' +
       '<span class="nom">' + esc(x.nombre) + '</span><span class="val">' + esc(x.ok ? (x.ms + ' ms') : x.detalle) + '</span>' +
       '<button class="quitar" data-quitar="' + esc(x.url) + '" title="' + T('Dejar de vigilar') + '">×</button></div>').join('');
-    html += tarjeta(T('Servicios'), (filas || '<div class="nota">' + T('Agrega direcciones para que el koala las vigile cada minuto (por ejemplo tu runserver de Django).') + '</div>') +
+    pintar('c-servicios', (filas || '<div class="nota">' + T('Agrega direcciones para que el koala las vigile cada minuto (por ejemplo tu runserver de Django).') + '</div>') +
       '<button class="boton-chico" id="btn-agregar-servicio">' + T('+ Vigilar un servicio') + '</button>');
-    pintar('sistema', html);
   }
 
   // Clics dentro de las pestañas (el contenido se vuelve a pintar, por eso se delega).
   document.addEventListener('click', (e) => {
     const t = e.target;
     if (!t || !t.getAttribute) return;
-    if (t.id === 'btn-agregar-servicio') vscode.postMessage({ tipo: 'agregarServicio' });
+    const alerta = t.closest && t.closest('.alerta[data-ir]');
+    if (alerta) irA(alerta.getAttribute('data-ir'));
+    else if (t.id === 'btn-agregar-servicio') vscode.postMessage({ tipo: 'agregarServicio' });
     else if (t.getAttribute('data-quitar')) vscode.postMessage({ tipo: 'quitarServicio', url: t.getAttribute('data-quitar') });
     else if (t.getAttribute('data-cmd')) vscode.postMessage({ tipo: 'comando', id: t.getAttribute('data-cmd') });
     else if (t.getAttribute('data-msg')) vscode.postMessage({ tipo: t.getAttribute('data-msg') });
@@ -363,6 +486,9 @@
     const m = e.data;
     if (!m || m.tipo !== 'estado') return;
     est = m;
+    // Primera vez en este equipo (o tras recargar): los carruseles guardados por la extensión (viajan con Settings Sync).
+    if (!desdeExtension && !cargadoDeExtension && valido(m.carruseles)) { carruseles = m.carruseles.slice(); guardar(false); armar(); }
+    cargadoDeExtension = true;
     pintarAlertas();
     pintarAlarmas();
     pintarConsumo();

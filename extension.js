@@ -414,23 +414,23 @@ function calcularAlertas(u) {
   const a = [];
   const umbral = config().get('avisarEnPorcentaje', 90);
   const max = Math.max(u.cinco && !u.cinco.reiniciada ? u.cinco.pct : 0, u.semana && !u.semana.reiniciada ? u.semana.pct : 0);
-  if (max >= umbral) a.push({ nivel: 3, pestana: 'consumo', texto: t('¡Casi al límite de Claude Code ({0} %)!', Math.round(max)) });
-  for (const s of servicios) if (!s.ok) a.push({ nivel: 3, pestana: 'sistema', texto: t('{0} no responde ({1})', s.nombre, s.detalle) });
+  if (max >= umbral) a.push({ nivel: 3, pestana: 'consumo', tarjeta: 'limites', texto: t('¡Casi al límite de Claude Code ({0} %)!', Math.round(max)) });
+  for (const s of servicios) if (!s.ok) a.push({ nivel: 3, pestana: 'sistema', tarjeta: 'servicios', texto: t('{0} no responde ({1})', s.nombre, s.detalle) });
   if (sistema) {
-    if (sistema.temperatura >= 85) a.push({ nivel: 3, pestana: 'sistema', texto: t('El servidor está a {0} °C', sistema.temperatura) });
-    if (sistema.memoria.pct >= 90) a.push({ nivel: 3, pestana: 'sistema', texto: t('Memoria del servidor al {0} %', Math.round(sistema.memoria.pct)) });
-    for (const d of sistema.discos) if (d.pct >= 90) a.push({ nivel: 3, pestana: 'sistema', texto: t('Disco {0} al {1} %', d.ruta, Math.round(d.pct)) });
+    if (sistema.temperatura >= 85) a.push({ nivel: 3, pestana: 'sistema', tarjeta: 'servidor', texto: t('El servidor está a {0} °C', sistema.temperatura) });
+    if (sistema.memoria.pct >= 90) a.push({ nivel: 3, pestana: 'sistema', tarjeta: 'servidor', texto: t('Memoria del servidor al {0} %', Math.round(sistema.memoria.pct)) });
+    for (const d of sistema.discos) if (d.pct >= 90) a.push({ nivel: 3, pestana: 'sistema', tarjeta: 'servidor', texto: t('Disco {0} al {1} %', d.ruta, Math.round(d.pct)) });
   }
   if (u.ritmo.estado === 'alcanza') {
-    a.push({ nivel: 2, pestana: 'consumo', texto: t('A este ritmo llegas al 100 % a las {0}, antes del corte', horaCorta(u.ritmo.eta)) });
+    a.push({ nivel: 2, pestana: 'consumo', tarjeta: 'ritmo', texto: t('A este ritmo llegas al 100 % a las {0}, antes del corte', horaCorta(u.ritmo.eta)) });
   }
   if (u.sesion && u.sesion.contexto_pct >= 85) {
-    a.push({ nivel: 2, pestana: 'consumo', texto: t('La conversación de Claude va al {0} % de contexto', Math.round(u.sesion.contexto_pct)) });
+    a.push({ nivel: 2, pestana: 'consumo', tarjeta: 'conversacion', texto: t('La conversación de Claude va al {0} % de contexto', Math.round(u.sesion.contexto_pct)) });
   }
-  if (diag.errores) a.push({ nivel: 1, pestana: 'hoy', texto: diag.errores === 1 ? t('Hay 1 error en el proyecto') : t('Hay {0} errores en el proyecto', diag.errores) });
+  if (diag.errores) a.push({ nivel: 1, pestana: 'hoy', tarjeta: 'problemas', texto: diag.errores === 1 ? t('Hay 1 error en el proyecto') : t('Hay {0} errores en el proyecto', diag.errores) });
   for (const g of gitInfo || []) {
     const viejo = !g.ultimoCommit || Date.now() - g.ultimoCommit > 3 * HORA;
-    if (g.cambios >= 1 && viejo) a.push({ nivel: 1, pestana: 'hoy', texto: g.cambios === 1 ? t('1 cambio sin commit en {0}', g.nombre) : t('{0} cambios sin commit en {1}', g.cambios, g.nombre) });
+    if (g.cambios >= 1 && viejo) a.push({ nivel: 1, pestana: 'hoy', tarjeta: 'git', texto: g.cambios === 1 ? t('1 cambio sin commit en {0}', g.nombre) : t('{0} cambios sin commit en {1}', g.cambios, g.nombre) });
   }
   return a.sort((x, y) => y.nivel - x.nivel);
 }
@@ -531,6 +531,7 @@ function enviarEstado() {
     alarmas: alarmas ? alarmas.lista() : [],
     sonidos: config().get('sonidos', false),
     visitantes: config().get('visitantes', true),
+    carruseles: contexto.globalState.get('koala.carruseles') || null,
   });
 }
 
@@ -742,6 +743,7 @@ class ProveedorVista {
       else if (msg.tipo === 'borrarAlarma') { alarmas.borrar(msg.id); enviarEstado(); }
       else if (msg.tipo === 'agua') { if (rutina) rutina.agua(); enviarEstado(); }
       else if (msg.tipo === 'visita') { if (rutina) rutina.alVisita(); }
+      else if (msg.tipo === 'carruseles' && Array.isArray(msg.valor)) contexto.globalState.update('koala.carruseles', msg.valor.slice(0, 8).map(String));
       else if (msg.tipo === 'consultarApi') consultarAnthropic(true);
       else if (msg.tipo === 'quitarServicio') quitarServicio(msg.url);
       else if (msg.tipo === 'comando') vscode.commands.executeCommand(msg.id);
@@ -782,7 +784,7 @@ function alTerminarDescanso() {
 function activate(ctx) {
   contexto = ctx;
   idioma.configurarIdioma(config().get('idioma', 'auto'), vscode.env.language);
-  ctx.globalState.setKeysForSync([CLAVE_ESTADO, 'koala.logros', 'koala.contadores', 'koala.alarmas']); // ánimo, saciedad y energía viajan con Settings Sync
+  ctx.globalState.setKeysForSync([CLAVE_ESTADO, 'koala.logros', 'koala.contadores', 'koala.alarmas', 'koala.carruseles']); // ánimo, saciedad y energía viajan con Settings Sync
   cargarEstado();
   configurador = crearConfigurador({ extensionPath: ctx.extensionPath, globalState: ctx.globalState, dirClaude: DIR_CLAUDE });
   pomodoro = crearPomodoro({

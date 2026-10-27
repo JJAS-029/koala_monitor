@@ -145,14 +145,28 @@ const ctx = {
   await pagina.goto('file://' + ruta);
   await pagina.evaluate((m) => window.postMessage(m, '*'), estado);
   await pagina.waitForTimeout(1500);
-  for (const p of ['mascota', 'consumo', 'hoy', 'sistema']) {
-    await pagina.click(`[data-pestana="${p}"]`);
-    await pagina.waitForTimeout(400);
+  const capturar = async (nombre) => {
     const alto = await pagina.evaluate(() => document.body.scrollHeight);
-    await pagina.setViewportSize({ width: 330, height: Math.min(1400, alto + 10) });
-    await pagina.screenshot({ path: path.join(SALIDA, `panel-${p}.png`) });
-    console.log('captura', p);
+    await pagina.setViewportSize({ width: 330, height: Math.min(4000, alto + 10) });
+    await pagina.screenshot({ path: path.join(SALIDA, `panel-${nombre}.png`) });
+    console.log('captura', nombre);
+  };
+  await capturar('inicio'); // carruseles de inicio
+  // Todas las tarjetas, en grupos de 6 carruseles.
+  const ids = await pagina.evaluate(() => window.koalaCarruseles.tarjetas());
+  for (let i = 0; i < ids.length; i += 6) {
+    await pagina.evaluate((l) => window.koalaCarruseles.fijar(l), ids.slice(i, i + 6));
+    await pagina.waitForTimeout(300);
+    await capturar('tarjetas-' + (i / 6 + 1));
   }
+  // Las flechas cambian de tarjeta sin repetir las que ya se ven.
+  await pagina.evaluate((l) => window.koalaCarruseles.fijar(l), ['mascota', 'limites']);
+  await pagina.click('.carrusel[data-i="0"] [data-car="next"]');
+  const tras = await pagina.evaluate(() => [...document.querySelectorAll('.car-sel')].map((s) => s.value));
+  console.log(tras.join() === 'alarmas,limites' ? '✓ la flecha avanza a la siguiente tarjeta' : '✗ flecha: ' + tras.join());
+  await pagina.selectOption('.carrusel[data-i="0"] .car-sel', 'limites');
+  const inter = await pagina.evaluate(() => [...document.querySelectorAll('.car-sel')].map((s) => s.value));
+  console.log(inter.join() === 'limites,alarmas' ? '✓ elegir una tarjeta visible las intercambia' : '✗ intercambio: ' + inter.join());
   const texto = await pagina.evaluate(() => document.body.innerText);
   console.log(/undefined|NaN/.test(texto) ? '✗ hay "undefined" o "NaN" en el panel' : '✓ sin undefined/NaN en el texto');
   console.log(errores.length ? '✗ errores: ' + errores.join(' | ') : '✓ sin errores de JavaScript');

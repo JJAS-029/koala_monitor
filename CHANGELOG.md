@@ -1,5 +1,12 @@
 # Registro de cambios
 
+## 1.5.0
+- **Carruseles en lugar de pestañas**: el panel muestra varios carruseles y cada uno enseña la tarjeta que elijas
+  (mascota, alarmas, pomodoro, límites, costo, huella, git, clima, servicios… 21 en total). Flechas, deslizar o
+  lista para saltar; elegir una tarjeta visible la intercambia; agregar, quitar y restablecer. Se guarda y viaja
+  con Settings Sync.
+- Tocar una alerta lleva su tarjeta a la vista; las tarjetas con alerta tienen un punto rojo.
+
 ## 1.4.1
 - Visitantes redibujados y más grandes: el **ajolote** ahora tiene cabeza ancha, sonrisa, tres branquias
   plumosas, cola con aleta y patitas (antes parecía un puerquito con cuernos); el **panda** tiene cuerpo

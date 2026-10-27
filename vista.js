@@ -36,8 +36,6 @@ function htmlVista(webview, extensionUri) {
   .botones button { font: inherit; padding: 4px 0; border: none; border-radius: 3px; cursor: pointer;
                     color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
   .botones button:hover { background: var(--vscode-button-secondaryHoverBackground); }
-  .lab { border-top: 1px solid var(--vscode-editorWidget-border, #8884); padding-top: 8px; }
-  .lab h3 { font-size: 11px; font-weight: 600; margin: 0 0 6px; opacity: .85; }
   .probeta { margin: 6px 0 8px; }
   .probeta .tit { display: flex; justify-content: space-between; margin-bottom: 3px; }
   .probeta .tit b { font-variant-numeric: tabular-nums; }
@@ -56,8 +54,6 @@ function htmlVista(webview, extensionUri) {
   .logros { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
   .logro { text-align: center; font-size: 20px; padding: 4px 0; border-radius: 4px; background: var(--vscode-editorWidget-background, #8881); }
   .logro.bloqueado { filter: grayscale(1); opacity: .3; }
-  .alarmas-caja { border-top: 1px solid var(--vscode-editorWidget-border, #8884); padding: 6px 0 8px; }
-  .tit-alarmas { font-size: 11px; font-weight: 600; opacity: .85; margin-bottom: 4px; }
   .alarma { display: grid; grid-template-columns: 18px 44px 1fr auto 16px; gap: 6px; align-items: center; font-size: 11px; margin: 3px 0; }
   .alarma.apagada { opacity: .45; }
   .alarma .hora { font-variant-numeric: tabular-nums; font-weight: 600; }
@@ -69,23 +65,45 @@ function htmlVista(webview, extensionUri) {
     color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, #8884); border-radius: 2px; }
   .alarma-form button { font: inherit; border: none; border-radius: 3px; cursor: pointer;
     color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
-  .pomo { border-top: 1px solid var(--vscode-editorWidget-border, #8884); padding: 6px 0 8px; }
-  .pomo .barra > i { width: 0; background: var(--vscode-charts-red, #e0524d); transition: width 1s linear; }
-  .pomo .barra > i.descanso { background: var(--vscode-charts-green, #5bc46a); }
+  [data-tj="pomodoro"] { padding-bottom: 4px; }
+  [data-tj="pomodoro"] .barra > i { width: 0; background: var(--vscode-charts-red, #e0524d); transition: width 1s linear; }
+  [data-tj="pomodoro"] .barra > i.descanso { background: var(--vscode-charts-green, #5bc46a); }
   .pomo-botones { display: grid; grid-template-columns: 2fr 1fr; gap: 4px; }
   .pomo-botones button { font: inherit; padding: 4px 0; border: none; border-radius: 3px; cursor: pointer;
                          color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
   .pomo-botones button:hover { background: var(--vscode-button-hoverBackground); }
   .pomo-botones #pomo-detener { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
-  .pestanas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin: 0 0 8px;
-              border-bottom: 1px solid var(--vscode-editorWidget-border, #8884); }
-  .pestanas button { font: inherit; font-size: 11px; padding: 4px 0 5px; border: none; background: none; cursor: pointer;
-                     color: var(--vscode-foreground); opacity: .65; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-  .pestanas button.sel { opacity: 1; border-bottom-color: var(--vscode-focusBorder, #3794ff); font-weight: 600; }
-  .pestanas button .punto { display: inline-block; width: 6px; height: 6px; border-radius: 3px; margin-left: 4px;
-                            vertical-align: middle; background: var(--vscode-charts-red, #e0524d); }
-  .vista { display: none; }
-  .vista.sel { display: block; }
+  /* Carruseles: cada uno muestra una tarjeta; flechas, lista para saltar y deslizar con el mouse. */
+  .carrusel { border: 1px solid var(--vscode-editorWidget-border, #8884); border-radius: 6px; margin: 0 0 8px; overflow: hidden;
+              background: var(--vscode-editorWidget-background, #8881); }
+  .car-cab { display: grid; grid-template-columns: 22px 1fr auto 22px 20px; align-items: center; gap: 2px; padding: 3px 4px;
+             border-bottom: 1px solid var(--vscode-editorWidget-border, #8884); }
+  .car-cab button { font: inherit; border: none; background: none; color: var(--vscode-foreground); cursor: pointer;
+                    padding: 0; height: 20px; border-radius: 3px; opacity: .75; }
+  .car-cab button:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground, #8883); }
+  .car-cab .flecha { font-size: 15px; line-height: 1; }
+  .car-sel { font: inherit; font-size: 11px; font-weight: 600; min-width: 0; width: 100%; border: none; border-radius: 3px;
+             padding: 2px 2px; cursor: pointer; color: var(--vscode-foreground); background: transparent; }
+  .car-sel:hover, .car-sel:focus { background: var(--vscode-dropdown-background, #8882); }
+  .car-sel option, .car-sel optgroup { color: var(--vscode-dropdown-foreground, var(--vscode-foreground));
+                                       background: var(--vscode-dropdown-background, #252526); }
+  .car-pos { font-size: 10px; opacity: .55; font-variant-numeric: tabular-nums; padding: 0 3px; }
+  .car-puntos { display: flex; justify-content: center; gap: 3px; padding: 0 0 5px; }
+  .car-puntos i { width: 4px; height: 4px; border-radius: 2px; background: var(--vscode-foreground); opacity: .2; }
+  .car-puntos i.sel { opacity: .8; width: 10px; }
+  .car-puntos i.alerta-punto { background: var(--vscode-charts-red, #e0524d); opacity: .9; }
+  .car-cuerpo { padding: 6px 8px 4px; touch-action: pan-y; }
+  .car-cuerpo.entra-der { animation: entraDer .18s ease-out; }
+  .car-cuerpo.entra-izq { animation: entraIzq .18s ease-out; }
+  @keyframes entraDer { from { transform: translateX(14px); opacity: .2; } to { transform: none; opacity: 1; } }
+  @keyframes entraIzq { from { transform: translateX(-14px); opacity: .2; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .car-cuerpo.entra-der, .car-cuerpo.entra-izq { animation: none; } }
+  .car-pie { display: flex; gap: 6px; justify-content: center; }
+  .car-pie .boton-chico { margin-top: 0; }
+  .tj .botones { margin: 8px 0 8px; }
+  .tj .boton-agua { margin: 0 0 4px; }
+  .tj .probeta:first-child { margin-top: 0; }
+  .alerta[data-ir] { cursor: pointer; }
   #alertas:empty { display: none; }
   #alertas { margin: 0 0 8px; }
   .alerta { font-size: 11px; padding: 4px 6px; border-radius: 3px; margin-bottom: 3px; border-left: 3px solid;
@@ -93,8 +111,6 @@ function htmlVista(webview, extensionUri) {
   .alerta.n3 { border-color: var(--vscode-charts-red, #e0524d); }
   .alerta.n2 { border-color: var(--vscode-charts-yellow, #f2b33d); }
   .alerta.n1 { border-color: var(--vscode-charts-blue, #3794ff); }
-  .tarjeta { border-top: 1px solid var(--vscode-editorWidget-border, #8884); padding: 8px 0 6px; }
-  .tarjeta h3 { font-size: 11px; font-weight: 600; margin: 0 0 6px; opacity: .85; }
   .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; }
   .cifra b { display: block; font-size: 15px; font-variant-numeric: tabular-nums; }
   .cifra span { font-size: 11px; opacity: .7; }
@@ -130,14 +146,15 @@ function htmlVista(webview, extensionUri) {
 <body>
   <canvas id="lienzo" title="${t('Clic para mimar al koala')}"></canvas>
   <div id="estado">${t('Preparando el laboratorio…')}</div>
-  <nav class="pestanas" role="tablist">
-    <button data-pestana="mascota" class="sel">${t('Mascota')}</button>
-    <button data-pestana="consumo">${t('Consumo')}</button>
-    <button data-pestana="hoy">${t('Hoy')}</button>
-    <button data-pestana="sistema">${t('Sistema')}</button>
-  </nav>
   <div id="alertas"></div>
-  <section class="vista sel" id="v-mascota">
+  <div id="carruseles"></div>
+  <div class="car-pie">
+    <button class="boton-chico" id="car-agregar">${t('+ Agregar carrusel')}</button>
+    <button class="boton-chico" id="car-restablecer" title="${t('Vuelve a los carruseles de inicio')}">${t('Restablecer')}</button>
+  </div>
+  <!-- Depósito: todas las tarjetas viven aquí y los carruseles las toman (koala.js las actualiza por id aunque no se vean). -->
+  <div id="deposito" hidden>
+  <div class="tj" data-tj="mascota">
   <div class="fila"><span>${t('Saciedad')}</span><div class="barra"><i id="b-saciedad"></i></div><span class="num" id="n-saciedad"></span></div>
   <div class="fila"><span>${t('Ánimo')}</span><div class="barra"><i id="b-animo"></i></div><span class="num" id="n-animo"></span></div>
   <div class="fila"><span id="l-energia">${t('Energía')}</span><div class="barra"><i id="b-energia"></i></div><span class="num" id="n-energia"></span></div>
@@ -150,8 +167,8 @@ function htmlVista(webview, extensionUri) {
     <button data-accion="dormir" id="btn-dormir">${t('Dormir')}</button>
   </div>
   <button class="boton-agua" id="btn-agua" title="${t('Suma un vaso a tu meta del día')}">${t('💧 Tomé un vaso de agua')}</button>
-  <div class="alarmas-caja">
-    <div class="tit-alarmas">${t('Alarmas')}</div>
+  </div>
+  <div class="tj" data-tj="alarmas">
     <div id="alarmas-lista"></div>
     <div class="alarma-form">
       <input type="time" id="alarma-hora" aria-label="${t('Hora')}">
@@ -162,7 +179,7 @@ function htmlVista(webview, extensionUri) {
       <button id="alarma-agregar" title="${t('Agregar alarma')}">+</button>
     </div>
   </div>
-  <div class="pomo">
+  <div class="tj" data-tj="pomodoro">
     <div class="probeta">
       <div class="tit"><span id="pomo-fase">Pomodoro</span><b id="pomo-reloj">25:00</b></div>
       <div class="barra"><i id="pomo-barra"></i></div>
@@ -173,10 +190,7 @@ function htmlVista(webview, extensionUri) {
       <button id="pomo-detener">${t('Detener')}</button>
     </div>
   </div>
-  </section>
-  <section class="vista" id="v-consumo">
-  <div class="lab">
-    <h3>${t('Límites de tu plan')}</h3>
+  <div class="tj" data-tj="limites">
     <div class="probeta">
       <div class="tit"><span>${t('Sesión (5 h)')}</span><b id="p-cinco">—</b></div>
       <div class="tubo"><i id="t-cinco"></i><span class="marcas"></span></div>
@@ -190,10 +204,9 @@ function htmlVista(webview, extensionUri) {
     <div id="uso-nota"></div>
     <button id="btn-configurar">${t('Configurar monitor')}</button>
   </div>
-  <div id="consumo-extra"></div>
-  </section>
-  <section class="vista" id="v-hoy"><div id="hoy"></div></section>
-  <section class="vista" id="v-sistema"><div id="sistema"></div></section>
+  ${['fuente', 'ritmo', 'costo', 'huella', 'conversacion', 'cache', 'resumen', 'proyectos', 'modelos', 'herramientas', 'git',
+     'problemas', 'calor', 'logros', 'servidor', 'clima', 'servicios'].map((id) => `<div class="tj" data-tj="${id}" id="c-${id}"></div>`).join('\n  ')}
+  </div>
   <script nonce="${nonce}">
     window.KOALA_DIC = ${JSON.stringify(idioma.diccionario() || {}).replace(/</g, '\\u003c')};
     window.KOALA_LOCALE = '${idioma.locale()}';

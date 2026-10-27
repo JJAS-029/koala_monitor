@@ -64,7 +64,12 @@ enfoque el koala monta su mesa (mechero, matraz y tubos) y experimenta; en el de
 al completar un pomodoro festeja. Reloj en el panel, en el lienzo y en la barra de estado (clic para
 pausar). Duraciones en `koalaCientifico.pomodoro.*` (25/5/15, descanso largo cada 4).
 
-## Mini monitor (pestañas)
+## Mini monitor (carruseles)
+Debajo del koala hay **carruseles** de tarjetas: cada uno muestra la que quieras. Cambia con las flechas ‹ ›,
+deslizando con el mouse o eligiendo en la lista del título (21 tarjetas en 4 grupos). Si eliges una que ya se ve
+en otro carrusel, se intercambian. *+ Agregar carrusel* (hasta 8), × para quitar uno y *Restablecer* para volver a
+Mascota · Límites · Resumen del día. Tu acomodo se guarda y viaja con Settings Sync.
+
 - **Consumo**: límites de 5 h y semana; ritmo de los últimos 30 min y a qué hora llegarías al 100 %
   (¿antes o después del corte?); conversación actual (contexto, costo equivalente en USD, líneas
   cambiadas, duración); eficiencia de caché.
@@ -73,7 +78,7 @@ pausar). Duraciones en `koalaCientifico.pomodoro.*` (25/5/15, descanso largo cad
   advertencias del proyecto; mapa de calor de uso por hora (7 días).
 - **Sistema**: CPU, memoria y disco del servidor; servicios vigilados cada minuto
   (`koalaCientifico.servicios` o botón *+ Vigilar un servicio*), con aviso si se caen o vuelven.
-- **Alertas**: las más importantes salen arriba, con un punto rojo en su pestaña; el koala las dice.
+- **Alertas**: las más importantes salen arriba (un clic lleva su tarjeta a la vista) y su tarjeta lleva un punto rojo; el koala las dice.
 
 ## Dato directo de Anthropic (opcional)
 Botón **Usar dato directo de Anthropic** (pestaña Consumo) o `koalaCientifico.usoDesdeAnthropic`:

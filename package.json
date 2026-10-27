@@ -2,7 +2,7 @@
   "name": "koala-cientifico",
   "displayName": "%nombre%",
   "description": "%descripcion%",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "publisher": "jjas-029",
   "license": "MIT",
   "icon": "media/icono.png",

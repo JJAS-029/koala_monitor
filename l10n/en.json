@@ -415,5 +415,16 @@
  "🐨📜 Claude terminó ({0}).": "🐨📜 Claude is done ({0}).",
  "💧 Tomé un vaso de agua": "💧 I drank a glass of water",
  "Al azar": "Random",
- "¿Quién viene de visita?": "Who is coming to visit?"
+ "¿Quién viene de visita?": "Who is coming to visit?",
+ "+ Agregar carrusel": "+ Add carousel",
+ "Vuelve a los carruseles de inicio": "Go back to the starting carousels",
+ "Restablecer": "Reset",
+ "Pomodoro": "Pomodoro",
+ "Logros": "Achievements",
+ "Anterior": "Previous",
+ "Siguiente": "Next",
+ "Elige qué ver aquí": "Choose what to see here",
+ "Quitar este carrusel": "Remove this carousel",
+ "Ver {0}": "See {0}",
+ "{0} de {1} desbloqueados": "{0} of {1} unlocked"
 }
