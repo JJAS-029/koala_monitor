@@ -98,10 +98,12 @@ if (process.env.DEMO) {
     { id: 'a3', hora: '18:00', mensaje: 'Subir los cambios', repeticion: 'diaria', activa: false, ultimaVez: null },
   ]);
 }
-const ctx = {
-  extensionUri: { fsPath: RAIZ }, extensionPath: RAIZ, subscriptions: [],
-  globalState: { get: (k, d) => (memoria.has(k) ? memoria.get(k) : d), update: async (k, v) => memoria.set(k, v), setKeysForSync() {} },
-};
+const ctx = { extensionUri: { fsPath: RAIZ }, extensionPath: RAIZ, subscriptions: [] };
+// Como en VS Code real: globalState es una propiedad fija del contexto (no configurable ni escribible).
+Object.defineProperty(ctx, 'globalState', {
+  value: { get: (k, d) => (memoria.has(k) ? memoria.get(k) : d), update: async (k, v) => memoria.set(k, v), keys: () => [...memoria.keys()], setKeysForSync() {} },
+  writable: false, configurable: false, enumerable: true,
+});
 
 (async () => {
   // un servicio que responde y otro apagado (18766 sin servidor)

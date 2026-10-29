@@ -1,5 +1,9 @@
 # Registro de cambios
 
+## 1.7.1
+- Arreglo: la 1.7.0 no arrancaba en VS Code («'get' on proxy: property 'globalState' is a read-only…»); el
+  contexto compartido ya no usa un Proxy. La vista previa simula el contexto real para que no se repita.
+
 ## 1.7.0
 - **Un solo koala en todas tus ventanas y editores**: las ventanas de VS Code, Antigravity, Cursor… de la misma
   computadora comparten al instante ánimo, sueño, pomodoro, alarmas, logros, rutina del día, carruseles, ciudad del

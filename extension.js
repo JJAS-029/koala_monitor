@@ -918,8 +918,15 @@ function activate(ctx) {
     ruta: RUTA_COMPARTIDO, globalState: ctx.globalState, claves: CLAVES_COMPARTIDAS,
     alCambiar: alCambiarCompartido, alGuardar: alGuardarCompartido,
   });
-  // Los módulos usan contexto.globalState como siempre, pero ahora es el compartido.
-  contexto = new Proxy(ctx, { get: (o, p) => (p === 'globalState' ? compartido : Reflect.get(o, p)) });
+  // Los módulos usan contexto.globalState como siempre, pero ahora es el compartido. Objeto propio y no un Proxy:
+  // en VS Code, globalState es una propiedad fija del contexto y un Proxy no puede devolver otra cosa.
+  contexto = {
+    globalState: compartido,
+    subscriptions: ctx.subscriptions,
+    extensionUri: ctx.extensionUri,
+    extensionPath: ctx.extensionPath,
+    extension: ctx.extension,
+  };
   lider = crearLider({ ruta: RUTA_LIDER, id: `${vscode.env.sessionId}-${process.pid}`, enfocado: () => vscode.window.state.focused });
   ctx.subscriptions.push(vscode.window.onDidChangeWindowState((e) => { if (e.focused) lider.latido(); }));
   ctx.subscriptions.push({ dispose() { compartido.cerrar(); lider.cerrar(); } });
