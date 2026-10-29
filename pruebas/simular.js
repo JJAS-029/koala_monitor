@@ -644,6 +644,45 @@ escena('33-en-ingles', 81, (e0, tomar) => {
   tomar();
 });
 
+escena('34-eucalipto', 91, (e, tomar) => {
+  const largo = estado({ trabajando: true, minutosTreparse: 120, rutina: { continuoMin: 130 } });
+  e.enviar(largo);
+  for (let i = 0; i < 12; i++) { e.avanzar(0.7); tomar(); }
+  e.avanzar(2); tomar();
+  verificar(e.koala.k.modo === 'arbol' && e.koala.k.alt > 20, 'se trepa a dormir al eucalipto tras 2 h seguidas');
+  verificar(/eucalipto/.test(e.elementos['estado'].textContent), 'avisa que llevas mucho sin descanso');
+  e.enviar(estado({ trabajando: true, minutosTreparse: 120, rutina: { continuoMin: 0 } }));
+  for (let i = 0; i < 5; i++) { e.avanzar(0.6); tomar(); }
+  e.avanzar(3);
+  verificar(e.koala.k.modo !== 'arbol' && e.koala.k.alt === 0, 'baja del árbol cuando descansas');
+  e.enviar(estado({ minutosTreparse: 0, rutina: { continuoMin: 500 } }));
+  e.avanzar(4);
+  verificar(e.koala.k.modo !== 'arbol', 'con minutosParaTreparse = 0 nunca se trepa');
+});
+
+escena('35-ofrenda', 92, (e, tomar) => {
+  e.enviar(estado({ temporada: 'muertos' }));
+  e.avanzar(0.5);
+  e.koala.probar('visitarOfrenda');
+  let verso = false;
+  for (let i = 0; i < 8; i++) { e.avanzar(0.7); tomar(); verso = verso || /🕯️|💀/.test(e.elementos['estado'].textContent); }
+  verificar(verso, 'visita la ofrenda y dice una calaverita');
+});
+
+escena('36-navidad-arbol-y-pinata', 93, (e, tomar) => {
+  const posada = new Date(new Date().getFullYear(), 11, 18, 12, 0).getTime();
+  e.enviar(estado({ temporada: 'navidad', horaPrueba: posada }));
+  e.avanzar(0.5);
+  e.koala.probar('adornarArbol');
+  for (let i = 0; i < 4; i++) { e.avanzar(0.8); tomar(); }
+  e.koala.probar('romperPinata');
+  let rota = false;
+  for (let i = 0; i < 12; i++) { e.avanzar(0.45); tomar(); rota = rota || /piñata/.test(e.elementos['estado'].textContent); }
+  verificar(rota, 'rompe la piñata en las posadas');
+  e.avanzar(3);
+  verificar(!e.koala.k.venda && e.koala.k.sosteniendo !== 'palo', 'se quita la venda y suelta el palo');
+});
+
 if (errores.length) {
   console.log(`\n${errores.length} verificación(es) fallaron`);
   process.exit(1);

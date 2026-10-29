@@ -91,7 +91,7 @@
     ojos: null, mirar: 0, dir: 1, paso: 0, caminando: false,
     brazos: 'normal', tecleo: 0, boca: false, sudor: false,
     laptop: null, frasco: null, sosteniendo: null, exp: null, brazoY: 0, hollin: 0,
-    cargado: false, cayendo: false, vAlt: 0, cabeceo: 0, escobaX: 0,
+    cargado: false, cayendo: false, vAlt: 0, cabeceo: 0, escobaX: 0, venda: false, palo: null,
     modo: 'libre', texto: '',
     parpadeo: 0, proxParpadeo: 3.7, t: 0,
   };
@@ -190,6 +190,8 @@
     if (k.modo === 'experimento') { recogerExperimento(); return true; }
     if (k.modo === 'dormido') { despertar(); return true; }
     if (k.modo === 'siesta') { despertarDeSiesta(); return true; }
+    if (k.modo === 'arbol') { bajarDelArbol(); return true; }
+    if (arbol && k.modo === 'libre') { encogerArbol(); return true; } // quedó un eucalipto sin koala
     return false;
   }
   const enSiesta = () => est.minutosSiesta > 0 && est.inactivoMin >= est.minutosSiesta && !est.trabajando;
@@ -213,6 +215,11 @@
       if (k.modo === 'experimento') return experimentar();
       if (salir()) return;
       return prepararExperimento();
+    }
+    if (enArbol()) {
+      if (k.modo === 'arbol') return seguirEnArbol();
+      if (salir()) return;
+      return treparArbol();
     }
     if (enSiesta()) {
       if (k.modo === 'siesta') return seguirSiesta();
@@ -449,6 +456,9 @@
       [nervioso() ? 3 : 0, mirarLados],
       [lloviendo() ? 2 : 0, paraguas],
       [est.clima && est.clima.temp >= 30 ? 2 : 0, abanicarse],
+      [est.temporada === 'muertos' ? 2 : 0, visitarOfrenda],
+      [est.temporada === 'navidad' ? 1.5 : 0, adornarArbol],
+      [est.temporada === 'navidad' && enPosadas() ? 1.5 : 0, romperPinata],
     ];
     let total = opciones.reduce((s, o) => s + o[0], 0);
     let r = Math.random() * total;
@@ -480,7 +490,7 @@
     if (n.saciedad < 35) return T('Tiene hambre: quiere eucalipto');
     if (n.animo < 35) return T('Está aburrido: quiere jugar');
     if (usoMaximo() >= 75) return T('Revisa tus mediciones con cuidado');
-    const fecha = TEXTO_TEMPORADA[est.temporada];
+    const fecha = est.temporada === 'navidad' && enPosadas() ? 'Temporada de posadas: ¡a romper la piñata! 🪅' : TEXTO_TEMPORADA[est.temporada];
     if (fecha && (k.t % 40) < 20) return T(fecha);
     if (ahoraLocal().getDay() === 5 && ahoraLocal().getHours() >= 16) return T('¡Viernes por la tarde! 🎶');
     if (momentoDelDia() === 'noche') return T('Trabajando de noche… no te desveles');
@@ -510,6 +520,8 @@
     const t = est.temporada;
     if (dt) return efectosFecha(t, dt);
     if (t === 'marmota') marmota();
+    else if (t === 'muertos') ofrenda();
+    else if (t === 'navidad') arbolNavidad();
     else if (t === 'pi') pizarronPi();
     else if (t === 'primavera') { flores(); mariposa(); }
     else if (t === 'nino') globos();
@@ -526,6 +538,12 @@
       particulas.push({ tipo: 'bit', uno: Math.random() < 0.5, x: azar(0, W), y: -6, vx: 0, vy: azar(25, 45), vida: 0, max: 3.5 });
     }
     if (t === 'cumple' && Math.random() < dt * 0.15) confeti(25);
+    if (t === 'muertos') {
+      // pétalos de cempasúchil que caen y humo de copal del sahumerio
+      if (Math.random() < dt * 0.7) particulas.push({ tipo: 'petalo', x: azar(0, W), y: -4, vx: azar(-6, 6), vy: azar(14, 24), fase: azar(0, 6), vida: 0, max: 9 });
+      const o = ofrendaX();
+      if (Math.random() < dt * 2.5) particulas.push({ tipo: 'vapor', x: o + 4.6 * C + azar(-2, 2), y: suelo - 1.2 * C, vx: azar(-3, 3), vy: -azar(8, 14), vida: 0, max: 2.4 });
+    }
   }
   function enFondo(x, f) { const prev = S; S = { ox: x, oy: suelo, sx: 1, sy: 1 }; f(); S = prev; }
 
@@ -613,6 +631,264 @@
     }
   }
   const G_CERO = ['XXX', 'X.X', 'X.X', 'X.X', 'XXX'], G_UNO = ['.X.', 'XX.', '.X.', '.X.', 'XXX'];
+
+  // Día de Muertos: ofrenda de tres niveles con arco de cempasúchil, velas, pan, calaverita y foto (de un disquete).
+  const ofrendaX = () => 4 + 7.5 * C;
+  function ofrenda() {
+    enFondo(ofrendaX(), () => {
+      const morado = '#7B4FA0', moradoS = '#5E3A80', encaje = '#F2F2F2';
+      [[-5.5, -2.2, 11], [-4.2, -4.4, 8.4], [-3, -6.6, 6]].forEach(([x, y, w]) => {
+        cel(x, y, w, 2.2, morado); cel(x, y + 1.6, w, 0.6, moradoS);
+        for (let i = 0; i < w - 0.3; i += 1) cel(x + i + 0.15, y, 0.6, 0.35, encaje); // orilla de papel picado
+      });
+      // arco de cempasúchil
+      for (let i = 0; i <= 12; i++) {
+        const a = Math.PI * i / 12;
+        cel(Math.cos(a) * 4.6 - 0.45, -6.6 - Math.sin(a) * 4 - 0.45, 0.9, 0.9, i % 2 ? '#F28C1B' : '#FFC93C');
+      }
+      // foto en el nivel de arriba: en memoria del disquete
+      cel(-1, -9.2, 2, 2.6, '#8B5A3C'); cel(-0.7, -8.9, 1.4, 2, '#9FB4C8');
+      cel(-0.5, -8.5, 1, 1.2, '#3A4A8A'); cel(-0.3, -8.5, 0.6, 0.4, '#C8CCD2');
+      // pan de muerto y calaverita de azúcar en el nivel de en medio
+      cel(-2.4, -5.3, 1.8, 0.9, '#D9A05B'); cel(-2.2, -5.6, 1.4, 0.3, '#C08840'); cel(-1.8, -5.9, 0.6, 0.4, '#C08840');
+      cel(0.8, -5.5, 1.5, 1.1, COL.blanco); cel(1, -5.3, 0.4, 0.4, COL.morado); cel(1.7, -5.3, 0.4, 0.4, COL.corazon);
+      cel(1.2, -4.7, 0.7, 0.2, '#F28C1B');
+      // velas (la flama parpadea)
+      [[-3.6, -4.4], [3.1, -4.4], [-5, -2.2], [4.5, -2.2]].forEach(([x, y], i) => {
+        const f = 0.5 + Math.sin(k.t * 11 + i * 2) * 0.12 + Math.sin(k.t * 5 + i) * 0.08;
+        cel(x, y - 1.3, 0.5, 1.3, '#F4E9C8');
+        cel(x + 0.05, y - 1.3 - f, 0.4, f, '#FFB13B');
+        cel(x - 0.7, y - 2.4, 1.9, 1.9, '#FFE7A0', 0.08);
+      });
+      // macetas de cempasúchil y el sahumerio con copal en el suelo
+      [-6.6, 6].forEach((x) => { cel(x, -1, 1, 1, '#B5651D'); cel(x - 0.2, -1.8, 1.4, 0.9, '#F28C1B'); });
+      cel(4.1, -0.7, 1.1, 0.7, '#8B5A3C'); cel(4.3, -0.9, 0.7, 0.3, '#C8CCD2');
+      // caminito de pétalos
+      for (let i = 0; i < 6; i++) cel(7.6 + i * 1.3, -0.25, 0.5, 0.25, '#F28C1B');
+    });
+  }
+  const CALAVERITAS = [
+    'La Huesuda llegó al laboratorio buscando a un programador; lo vio haciendo deploy en viernes… ¡y salió huyendo! 💀',
+    'Ofrenda para los que ya no están: el disquete, Flash e Internet Explorer 🕯️',
+    'Pan de muerto y chocolate para las ramas que nunca se mergearon 🕯️',
+    'Aquí yace el código sin pruebas: nadie lo extraña 💀',
+  ];
+  function visitarOfrenda() {
+    const verso = CALAVERITAS[Math.floor(Math.random() * CALAVERITAS.length)];
+    cola.push(
+      caminarA(ofrendaX() + 12 * C, true),
+      esperar(3.2, {
+        libre: true,
+        ini() { k.mirar = -1; k.texto = T(verso); },
+        act(p) { k.ojos = p > 0.25 && p < 0.6 ? 'cerrados' : null; },
+      }),
+      esperar(0.6, { libre: true, ini() { k.ojos = 'felices'; }, fin() { k.ojos = null; k.mirar = 0; } })
+    );
+  }
+
+  // Navidad: árbol con foquitos que cambian de color, estrella, regalos y las esferas que cuelga el koala.
+  const arbolNavidadX = () => 4 + 6 * C;
+  const COLORES_FOCOS = ['#FFD34D', '#E85A7A', '#7FD3F0', '#5BC46A'];
+  const esferas = [[-2.6, -3.4, COL.rojo], [2, -4.6, '#FFD34D'], [-1.2, -6.8, COL.lente], [1.2, -8.6, COL.morado]];
+  function arbolNavidad() {
+    enFondo(arbolNavidadX(), () => {
+      cel(-1.5, -1.3, 3, 1.3, '#C0392B'); cel(-1.5, -1.3, 3, 0.3, '#E05A4B'); // maceta
+      cel(-0.5, -2.2, 1, 0.9, COL.tallo);
+      for (let i = 0; i < 9; i++) {
+        const w = 9 - i, y = -3.2 - i * 1.05;
+        cel(-w / 2, y, w, 1.1, i % 2 ? '#2E7D4F' : '#3A9A5F');
+      }
+      // foquitos en zigzag por los niveles
+      for (let i = 0; i < 8; i++) {
+        const w = 8.4 - i, y = -2.9 - i * 1.05;
+        const x = (i % 2 ? -1 : 1) * (w / 2 - 0.6) - 0.2;
+        const c = COLORES_FOCOS[(i + Math.floor(k.t * 2)) % COLORES_FOCOS.length];
+        cel(x, y, 0.45, 0.45, c);
+        cel(x - 0.5, y - 0.5, 1.45, 1.45, c, 0.12);
+      }
+      esferas.forEach(([x, y, c]) => { cel(x, y, 0.8, 0.8, c); cel(x + 0.15, y + 0.12, 0.25, 0.25, COL.blanco, 0.8); });
+      // estrella
+      const brillo = 0.75 + Math.sin(k.t * 3) * 0.25;
+      cel(-0.5, -13.3, 1, 1, '#FFD34D'); cel(-1.1, -13, 2.2, 0.4, '#FFD34D'); cel(-0.2, -13.9, 0.4, 2.2, '#FFD34D');
+      cel(-1.2, -14.2, 2.4, 2.4, '#FFE7A0', 0.15 * brillo);
+      // regalos
+      cel(-5.4, -1.6, 2.4, 1.6, COL.lente); cel(-4.35, -1.6, 0.3, 1.6, COL.rojo); cel(-5.4, -1, 2.4, 0.3, COL.rojo);
+      cel(3.2, -1.3, 2, 1.3, COL.morado); cel(4.05, -1.3, 0.3, 1.3, '#FFD34D'); cel(3.6, -1.7, 0.5, 0.4, '#FFD34D'); cel(4.3, -1.7, 0.5, 0.4, '#FFD34D');
+    });
+  }
+  function adornarArbol() {
+    const color = COLORES_FOCOS[Math.floor(Math.random() * COLORES_FOCOS.length)];
+    cola.push(
+      caminarA(arbolNavidadX() + 10.5 * C, true),
+      esperar(0.9, { libre: true, ini() { k.mirar = -1; k.brazos = 'arriba'; k.texto = T('Cuelga una esfera en el árbol 🎄'); } }),
+      esperar(0.8, {
+        libre: true,
+        ini() {
+          // la esfera nueva queda colgada (máximo 10: luego reemplaza las más viejas que puso él)
+          const nivel = Math.floor(azar(1, 8)), w = 8 - nivel;
+          if (esferas.length >= 10) esferas.splice(4, 1);
+          esferas.push([azar(-w / 2 + 0.3, w / 2 - 1), -3.2 - nivel * 1.05, color]);
+          particulas.push({ tipo: 'chispa', x: arbolNavidadX(), y: suelo - (4 + nivel) * C, vx: 0, vy: -6, vida: 0, max: 0.6 });
+          k.brazos = 'normal'; k.ojos = 'felices';
+        },
+        fin() { k.ojos = null; k.mirar = 0; },
+      })
+    );
+  }
+
+  // Posadas (16–24 de dic.): piñata de siete picos, con los ojos vendados y un palo.
+  function enPosadas() { const d = ahoraLocal(); return d.getMonth() === 11 && d.getDate() >= 16 && d.getDate() <= 24; }
+  let pinata = null; // { x, cy, vaiven, rota }
+  const PICOS = [[0, -1, '#E85A7A'], [1, -0.4, '#7FD3F0'], [1, 0.6, '#5BC46A'], [0, 1, '#A77BE0'], [-1, 0.6, '#F28C1B'], [-1, -0.4, '#FFD34D']];
+  function dibujarPinata() {
+    if (!pinata) return;
+    const x = pinata.x + Math.sin(k.t * 7) * pinata.vaiven * 6, y = pinata.cy;
+    rect(pinata.x, 0, 1, Math.max(0, y - 1.6 * C), colorSuelo, 0.8); // la cuerda
+    const prev = S; S = { ox: x, oy: y, sx: 1, sy: 1 };
+    if (!pinata.rota) {
+      PICOS.forEach(([dx, dy, c]) => {
+        cel(dx * 2.6 - 0.5, dy * 2.6 - 0.5, 1, 1, c);
+        cel(dx * 3.4 - 0.25, dy * 3.4 - 0.25, 0.5, 0.5, COL.blanco);
+      });
+      cel(-1.6, -1.6, 3.2, 3.2, '#F2B33D'); cel(-1.6, -0.3, 3.2, 0.6, COL.rojo); cel(-1.6, 0.8, 3.2, 0.4, COL.lente);
+    } else {
+      cel(-0.5, -3.1, 1, 1.5, '#E85A7A'); cel(-1.6, -1.6, 3.2, 1.2, '#F2B33D'); // solo queda el pico de arriba
+    }
+    S = prev;
+  }
+  function romperPinata() {
+    const xKoala = Math.min(k.x, W - 13 * C);
+    const golpe = (n) => [
+      esperar(0.4, { ini() { k.palo = 'arriba'; } }),
+      esperar(0.35, {
+        ini() {
+          k.palo = 'golpe';
+          if (n === 0) { k.texto = T('¡Uy! Le dio al aire'); pinata.vaiven = 0.6; return; }
+          if (n === 1) { pinata.vaiven = 1.2; particulas.push({ tipo: 'chispa', x: pinata.x, y: pinata.cy, vx: 0, vy: 0, vida: 0, max: 0.4 }); return; }
+          pinata.rota = true; pinata.vaiven = 0.4; sonar('pinata');
+          for (let i = 0; i < 28; i++) {
+            particulas.push({ tipo: 'dulce', color: COLORES_CONFETI[i % COLORES_CONFETI.length], x: pinata.x + azar(-6, 6), y: pinata.cy, vx: azar(-45, 45), vy: -azar(10, 60), vida: 0, max: azar(1.2, 1.8) });
+          }
+        },
+      }),
+    ];
+    if (Math.abs(xKoala - k.x) > 2) cola.push(caminarA(xKoala));
+    cola.push(
+      esperar(1, {
+        ini() {
+          posturaBase(); k.mirar = 1; k.venda = true; k.sosteniendo = 'palo'; k.palo = 'abajo';
+          k.texto = T('🎶 Dale, dale, dale, no pierdas el tino…');
+          pinata = { x: k.x + 9.5 * C, cy: -20, vaiven: 0, rota: false };
+        },
+        act(p) { pinata.cy = mezcla(-20, suelo - 11.5 * C, suave(p)); },
+      }),
+      ...golpe(0), ...golpe(1), ...golpe(2),
+      esperar(1.6, {
+        ini() { k.venda = false; k.sosteniendo = null; k.palo = null; k.brazos = 'aplauso'; k.ojos = 'felices'; k.texto = T('¡Se rompió la piñata! Dulces para todos 🍬'); },
+        fin() { pinata = null; posturaBase(); },
+      })
+    );
+  }
+  function paloEnMano() {
+    if (k.sosteniendo !== 'palo') return;
+    if (k.palo === 'golpe') { cel(5.4, -10.4, 6.5, 0.5, COL.tallo); return; }
+    if (k.palo === 'arriba') { cel(4.8, -16, 0.5, 6.5, COL.tallo); return; }
+    cel(5.6, -9.5, 0.5, 5.5, COL.tallo);
+  }
+
+  // ---------- Eucalipto: después de mucho trabajo seguido se trepa a dormir ----------
+  // est.rutina.continuoMin = minutos de actividad sin un hueco de 10 min; se baja cuando descansas.
+  const enArbol = () => est.minutosTreparse > 0 && !!est.rutina && est.rutina.continuoMin >= est.minutosTreparse;
+  let arbol = null; // { x, crecer: 0..1 }
+  const alturaRama = () => Math.max(10, Math.min(42, suelo - 72));
+  const arbolX = () => Math.max(9 * C, Math.min(W - 9 * C, Math.round(W * 0.3)));
+  const CORTEZA = '#A89A8C', CORTEZA_C = '#D6CCC0', CORTEZA_S = '#7E7064';
+  const HOJAS_EUCA = [[-5.4, -1.2, 4.4, 2.4, 0], [-2.6, -3, 5.4, 2.8, 1], [1.6, -1.4, 4.6, 2.4, 2], [-7, 0.8, 3.4, 1.6, 1], [3.8, 0.9, 3.4, 1.5, 0], [-1.4, 0.2, 2.8, 1.8, 2]];
+  function dibujarArbol() {
+    if (!arbol) return;
+    const g = arbol.crecer;
+    const rama = alturaRama() / C;
+    const copa = rama + 11.5; // la copa queda justo arriba de la cabeza
+    const tronco = copa * Math.min(1, g * 1.4);
+    const prev = S; S = { ox: arbol.x, oy: suelo, sx: 1, sy: 1 };
+    cel(-1.3, -tronco, 2.6, tronco, CORTEZA);
+    cel(-0.5, -tronco, 0.6, tronco, CORTEZA_C);
+    cel(0.7, -tronco, 0.4, tronco, CORTEZA_S);
+    if (g > 0.5) {
+      const q = (g - 0.5) * 2;
+      cel(-4 * q, -rama - 0.2, 8 * q, 0.7, CORTEZA); // la rama donde se sienta
+      HOJAS_EUCA.forEach(([x, y, w, h, i]) => {
+        const m = Math.sin(k.t * 1.3 + x) * 0.15;
+        cel((x + m) * q, -copa + y * q, w * q, h * q, ['#6E9C7E', '#4F7D62', '#8FBF9F'][i]);
+      });
+      // hojitas sueltas, alargadas como las del eucalipto
+      for (let i = 0; i < 5; i++) cel((-4 + i * 2) * q, -copa + (2.2 + (i % 2) * 0.6) * q, 0.4 * q, 1 * q, '#4F7D62');
+    }
+    S = prev;
+  }
+  function treparArbol() {
+    const x = arbolX();
+    const rama = alturaRama();
+    const min = est.rutina.continuoMin;
+    cola.push(
+      esperar(0.01, { ini() { posturaBase(); k.texto = T('Llevas {0} min sin descanso: el koala se va a dormir a su eucalipto', min); } }),
+      caminarA(x - 6 * C),
+      esperar(1.1, {
+        ini() { k.mirar = 1; k.frasco = { color: COL.verde }; k.brazos = 'frasco'; k.texto = T('Riega una semilla de eucalipto…'); },
+        act(p, dt) { if (p > 0.3 && Math.random() < dt * 12) particulas.push({ tipo: 'gota', color: COL.verde, x: k.x + 6.4 * C, y: suelo - 6 * C, vx: 4, vy: 40, vida: 0, max: 0.8 }); },
+        fin() { k.frasco = null; k.brazos = 'normal'; },
+      }),
+      esperar(1.4, {
+        ini() { arbol = { x, crecer: 0 }; puf(x, suelo - 2 * C); k.ojos = 'felices'; sonar('crecer'); },
+        act(p) { arbol.crecer = suave(p); },
+        fin() { arbol.crecer = 1; k.ojos = null; },
+      }),
+      caminarA(x),
+      esperar(1.8, {
+        ini() { ponerPose('estirado'); k.mirar = 0; k.texto = T('Se trepa al eucalipto…'); },
+        act(p, dt, t) {
+          const n = p * 6; // seis jalones
+          k.alt = rama * (Math.floor(n) + suave(n % 1)) / 6;
+          k.brazos = Math.floor(t * 6) % 2 ? 'arriba' : 'arriba-der';
+        },
+        fin() { k.alt = rama; },
+      }),
+      esperar(0.6, {
+        ini() { ponerPose('frente'); k.brazos = 'normal'; k.ojos = 'cerrados'; k.boca = true; k.texto = T('Bosteza…'); },
+        fin() { k.boca = false; k.modo = 'arbol'; },
+      })
+    );
+  }
+  function seguirEnArbol() {
+    cola.push(esperar(2, {
+      libre: true,
+      ini() {
+        k.ojos = 'cerrados'; k.alt = alturaRama();
+        k.texto = T('Duerme en su eucalipto: llevas {0} min sin descanso. ¡Estírate tú también!', est.rutina.continuoMin);
+      },
+      act(p) { k.balanceo = Math.sin(p * Math.PI * 2) * 0.06; },
+      fin() { k.balanceo = 0; },
+    }));
+  }
+  function bajarDelArbol() {
+    const rama = alturaRama();
+    cola.push(
+      esperar(0.5, { ini() { ponerPose('estirado'); k.brazos = 'arriba'; k.ojos = 'abiertos'; k.texto = T('¡Qué buena siesta! Baja del eucalipto'); } }),
+      esperar(0.9, {
+        act(p, dt, t) { k.alt = rama * (1 - suave(p)); k.brazos = Math.floor(t * 6) % 2 ? 'arriba' : 'arriba-der'; },
+        fin() { k.alt = 0; },
+      }),
+      esperar(0.25, { ini() { ponerPose('aplastado'); k.brazos = 'normal'; puf(k.x, suelo - C); } })
+    );
+    encogerArbol();
+  }
+  function encogerArbol() {
+    cola.push(esperar(0.8, {
+      ini() { posturaBase(); if (arbol) puf(arbol.x, suelo - 8 * C); },
+      act(p) { if (arbol) arbol.crecer = 1 - p; },
+      fin() { arbol = null; posturaBase(); k.modo = 'libre'; },
+    }));
+  }
 
   // ---------- Rutina del día ----------
   function buenosDias(d) {
@@ -718,7 +994,7 @@
 
   // ---------- Sonidos (WebAudio, sin archivos) ----------
   let audio = null;
-  const TONOS = { alarma: [988, 0, 988, 0, 988, 0, 988], listo: [660, 880], pomodoro: [523, 659, 784], commit: [784, 988], logro: [523, 659, 784, 1047], fallo: [330, 247] };
+  const TONOS = { alarma: [988, 0, 988, 0, 988, 0, 988], listo: [660, 880], pomodoro: [523, 659, 784], commit: [784, 988], logro: [523, 659, 784, 1047], fallo: [330, 247], pinata: [523, 659, 523, 784], crecer: [392, 523, 659] };
   function sonar(tipo) {
     if (!est.sonidos || typeof AudioContext === 'undefined') return;
     try {
@@ -1446,7 +1722,7 @@
     particulas.push({ tipo: 'corazon', x: k.x + azar(-4, 4) * C, y: suelo - k.alt - 10 * C, vx: azar(-8, 8), vy: -azar(20, 34), vida: 0, max: 1.4 });
   }
   function zeta() {
-    particulas.push({ tipo: 'z', x: k.x + 3 * C, y: suelo - 9 * C, vx: 7, vy: -16, vida: 0, max: 2.2 });
+    particulas.push({ tipo: 'z', x: k.x + 3 * C, y: suelo - k.alt - 9 * C, vx: 7, vy: -16, vida: 0, max: 2.2 });
   }
   function burbujaFrasco() {
     particulas.push({ tipo: 'burbuja', x: k.x + 11.2 * C, y: suelo - 3.2 * C, vx: azar(-3, 3), vy: -azar(10, 18), vida: 0, max: 1.2 });
@@ -1455,12 +1731,14 @@
     for (let i = particulas.length - 1; i >= 0; i--) {
       const q = particulas[i];
       q.vida += dt;
-      if (q.tipo === 'miga') q.vy += 160 * dt;
+      if (q.tipo === 'miga' || q.tipo === 'dulce') q.vy += 160 * dt;
+      if (q.tipo === 'dulce' && q.y > suelo - 2) { q.y = suelo - 2; q.vy = 0; q.vx *= 0.8; }
       if (q.tipo === 'fuego') { q.vy += 40 * dt; q.vx *= 0.98; }
       q.x += q.vx * dt;
       q.y += q.vy * dt;
       if (q.tipo === 'z') q.x += Math.sin(q.vida * 3) * 0.3;
-      if (q.tipo === 'confeti') q.x += Math.sin(q.fase + q.vida * 4) * 0.5;
+      if (q.tipo === 'confeti' || q.tipo === 'petalo') q.x += Math.sin(q.fase + q.vida * 4) * 0.5;
+      if (q.tipo === 'petalo' && q.y > suelo - 2) { q.y = suelo - 2; q.vy = 0; q.vx = 0; }
       if (q.vida >= q.max) particulas.splice(i, 1);
     }
   }
@@ -1471,6 +1749,8 @@
       else if (q.tipo === 'z') glifo(G_Z, q.x, q.y, 1 + q.vida * 0.6, COL.z, a);
       else if (q.tipo === 'burbuja') rect(q.x, q.y, 2, 2, COL.vidrio, a);
       else if (q.tipo === 'miga') rect(q.x, q.y, 2, 2, COL.hoja, a);
+      else if (q.tipo === 'dulce') { rect(q.x, q.y, 3, 2, q.color, Math.min(1, a * 2)); rect(q.x - 1, q.y + 0.5, 1, 1, q.color, Math.min(1, a * 2)); rect(q.x + 3, q.y + 0.5, 1, 1, q.color, Math.min(1, a * 2)); }
+      else if (q.tipo === 'petalo') rect(q.x, q.y, 2, 2, Math.floor(q.fase) % 2 ? '#F28C1B' : '#FFC93C', Math.min(1, a * 3));
       else if (q.tipo === 'gota') rect(q.x, q.y, 2, 3, q.color, a);
       else if (q.tipo === 'nota') glifo(G_NOTA, q.x, q.y, 1.5, COL.ambar, a);
       else if (q.tipo === 'fuego') rect(q.x, q.y, 2, 2, q.color, a);
@@ -1546,6 +1826,8 @@
     cel(-0.7 + m * 0.35, -5.8, 0.5, 0.4, COL.narizL);
     if (k.boca) cel(-0.5 + m * 0.35, -4.2, 1, 0.5, COL.boca);
     if (k.sudor) cel(4.4, -7.6, 0.6, 1, COL.sudor);
+    if (k.venda) { cel(-4.2, -7.1, 8.4, 1.5, '#C62828'); cel(-5, -6.9, 1, 2, '#C62828'); } // para la piñata
+    paloEnMano();
     // brazos 2×2
     brazoIzq();
     brazoDer();
@@ -2062,11 +2344,13 @@
     decorarFecha(0);
     dibujarLampara();
     dibujarVisitante(false);
+    dibujarArbol();
     const laptopAtras = k.laptop && k.brazos === 'atras';
     if (laptopAtras) dibujarLaptop();
     if (k.pose === 'sentado') koalaSentado(); else koalaFrente();
     if (!laptopAtras) dibujarLaptop();
     dibujarMesa();
+    dibujarPinata();
     dibujarCohete();
     dibujarRelojArena();
     dibujarComidaArrastrable();
@@ -2100,7 +2384,8 @@
     moverParticulas(dt);
     moverVisita(dt);
     decorarFecha(dt);
-    if ((k.modo === 'dormido' || k.modo === 'siesta') && Math.random() < dt * 0.9) zeta();
+    if ((k.modo === 'dormido' || k.modo === 'siesta' || k.modo === 'arbol') && Math.random() < dt * 0.9) zeta();
+    if (pinata) pinata.vaiven = Math.max(0, pinata.vaiven - dt * 0.5);
     pintarTexto();
   }
 
@@ -2278,5 +2563,9 @@
   requestAnimationFrame(cuadro);
 
   // Gancho para las pruebas sin navegador.
-  window.__koala = { k, est: () => est, cola: () => cola };
+  window.__koala = {
+    k, est: () => est, cola: () => cola,
+    // fuerza una acción de ocio de temporada (las escenas no dependen del azar)
+    probar(nombre) { cola = []; paso = null; posturaBase(); ({ visitarOfrenda, adornarArbol, romperPinata })[nombre](); },
+  };
 })();

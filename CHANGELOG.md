@@ -1,5 +1,14 @@
 # Registro de cambios
 
+## 1.6.0
+- **Siesta en el eucalipto**: tras `koalaCientifico.minutosParaTreparse` (120) minutos de actividad seguida, el koala
+  riega una semilla, crece un eucalipto, se trepa y se duerme en la rama. Baja cuando tomas un descanso de 10 min.
+- **Ofrenda de Día de Muertos** (28 oct.–2 nov.): tres niveles con arco de cempasúchil, velas, pan de muerto,
+  calaverita de azúcar, copal y una foto del disquete. El koala la visita y recita calaveritas; caen pétalos.
+- **Árbol de Navidad desde el 1 de diciembre** (antes la temporada empezaba el 12): foquitos que cambian de color,
+  estrella, regalos y esferas que el koala va colgando. En las **posadas** (16–24 dic.) rompe una piñata de siete
+  picos con los ojos vendados.
+
 ## 1.5.0
 - **Carruseles en lugar de pestañas**: el panel muestra varios carruseles y cada uno enseña la tarjeta que elijas
   (mascota, alarmas, pomodoro, límites, costo, huella, git, clima, servicios… 21 en total). Flechas, deslizar o

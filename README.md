@@ -119,6 +119,8 @@ baila con el mensaje del commit; con cada **push** lanza un cohete. Cada uno sub
   tarde baila más.
 - **Siesta**: tras `koalaCientifico.minutosParaSiesta` (20) sin actividad se duerme sobre la
   laptop; al volver despierta sobresaltado.
+- **Eucalipto**: tras `koalaCientifico.minutosParaTreparse` (120) minutos trabajando sin un descanso de 10 min,
+  hace crecer un eucalipto, se trepa y se duerme en la rama; baja cuando descansas (0 = nunca).
 - **Arrastrar**: carga al koala con el mouse y suéltalo (cae aplastado); arrastra la rama de la
   esquina para darle de comer donde la sueltes. Un clic sin arrastrar lo mima.
 
@@ -161,8 +163,8 @@ una notificación con *Posponer 5 min*. *Koala científico: ver alarmas* las enc
 | día 256 | lluvia de ceros y unos (Día del Programador) |
 | 13–16 sep. | moño tricolor |
 | 12 oct. | globo terráqueo (Día de la Nación Pluricultural) |
-| 28 oct. – 2 nov. | catrina, cempasúchil y papel picado |
-| 12 dic. – 6 ene. | gorro de Navidad |
+| 28 oct. – 2 nov. | catrina, cempasúchil, papel picado y ofrenda (la visita y recita calaveritas) |
+| 1 dic. – 6 ene. | gorro y árbol de Navidad (cuelga esferas); en las posadas (16–24 dic.) rompe la piñata |
 | tu cumpleaños | pastel con velas, gorro y confeti (`koalaCientifico.cumpleanos` = `DD/MM`) |
 
 `koalaCientifico.temporada` fuerza cualquiera de ellas para verla cuando quieras.

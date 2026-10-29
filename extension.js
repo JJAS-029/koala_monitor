@@ -283,7 +283,7 @@ function temporada() {
   if (diaDelAnio === 256) return 'programador'; // 13 de sep. (12 en año bisiesto)
   if (mes === 10 && dia === 12) return 'pluricultural';
   if ((mes === 10 && dia >= 28) || (mes === 11 && dia <= 2)) return 'muertos';
-  if ((mes === 12 && dia >= 12) || (mes === 1 && dia <= 6)) return 'navidad';
+  if (mes === 12 || (mes === 1 && dia <= 6)) return 'navidad'; // árbol desde el 1 de diciembre
   if (mes === 9 && dia >= 13 && dia <= 16) return 'patrias';
   return 'ninguna';
 }
@@ -525,6 +525,7 @@ function enviarEstado() {
     racha: monitor.racha(gitInfo),
     inactivoMin: minutosInactivo(),
     minutosSiesta: config().get('minutosParaSiesta', 20),
+    minutosTreparse: config().get('minutosParaTreparse', 120),
     temporada: temporada(),
     clima: climaActual,
     rutina: rutina ? rutina.estado() : null,

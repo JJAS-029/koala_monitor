@@ -120,6 +120,7 @@ function crearRutina({ contexto, animar, notificar, config }) {
     estado() {
       return {
         agua: dia.agua,
+        continuoMin: dia.inicioContinuo ? Math.round((Date.now() - dia.inicioContinuo) / 60000) : 0,
         metaAgua: config().get('metaAgua', 8),
         diasSinErrores: Math.floor((Date.now() - ultimoError) / 86400000),
         logros: LOGROS.map((l) => ({ ...l, nombre: t(l.nombre), desc: t(l.desc), fecha: logros[l.id] || null })),
