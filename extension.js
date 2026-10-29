@@ -1,6 +1,7 @@
 'use strict';
 // Koala científico: mascota de laboratorio que trabaja contigo y vigila tu consumo de Claude Code.
-// Sin dependencias ni conexión a internet: todo sale de archivos locales en ~/.claude.
+// Sin dependencias: todo sale de archivos locales en ~/.claude (internet solo para lo que actives: clima,
+// dato directo de Anthropic y sincronización con GitHub).
 
 const vscode = require('vscode');
 const fs = require('fs');
@@ -15,6 +16,8 @@ const idioma = require('./idioma');
 const { t } = idioma;
 const { crearPomodoro } = require('./pomodoro');
 const { crearConfigurador } = require('./configurar');
+const { crearCompartido, crearLider } = require('./compartido');
+const { crearNube } = require('./nube');
 const {
   crearConsumo, inicioVentana, ventanaVigente, formatoTokens, duracionTexto, HORA, CINCO_HORAS, SIETE_DIAS,
 } = require('./consumo');
@@ -26,9 +29,18 @@ const DIR_PROYECTOS = path.join(DIR_CLAUDE, 'projects');
 
 const CLAVE_ESTADO = 'koala.estado';
 const CLAVE_AVISOS = 'koala.avisos';
+// Lo que comparten todas las ventanas y editores de esta computadora (y la cuenta de GitHub, si la activas).
+const CLAVES_RUTINA = ['koala.dia', 'koala.logros', 'koala.contadores', 'koala.ultimoError'];
+const CLAVES_COMPARTIDAS = [CLAVE_ESTADO, 'koala.pomodoro', 'koala.alarmas', 'koala.carruseles', 'koala.lugarClima',
+  'koala.ajustes', 'koala.monitorAceptado', ...CLAVES_RUTINA];
+const RUTA_COMPARTIDO = path.join(DIR_CLAUDE, 'koala', 'compartido.json');
+const RUTA_LIDER = path.join(DIR_CLAUDE, 'koala', 'lider.json');
 const TURNO_MAXIMO_MS = 15 * 60 * 1000;
 
-let contexto = null;
+let contexto = null; // el de VS Code, pero con globalState compartido entre ventanas
+let compartido = null;
+let lider = null;
+let nube = null;
 let vista = null;
 let barra = null;
 
@@ -90,6 +102,15 @@ function cargarEstado() {
   ultimoTick = Date.now();
 }
 
+// Otra ventana o la nube cambiaron ánimo, saciedad, energía o sueño.
+function recargarEstado() {
+  const g = contexto.globalState.get(CLAVE_ESTADO);
+  if (!g) return;
+  necesidades = Object.assign(necesidades, g.necesidades || {});
+  durmiendo = !!g.durmiendo;
+  ultimoTick = g.ts || Date.now(); // el desgaste ya se aplicó hasta ese momento
+}
+
 function guardarEstado() {
   contexto.globalState.update(CLAVE_ESTADO, { necesidades, durmiendo, ts: Date.now() });
 }
@@ -104,6 +125,7 @@ function aplicarDesgaste(horas, conTrabajo) {
 }
 
 function tick() {
+  if (lider && !lider.esLider()) { enviarEstado(); return; } // otra ventana lleva la cuenta
   const ahora = Date.now();
   const horas = (ahora - ultimoTick) / HORA;
   ultimoTick = ahora;
@@ -533,6 +555,7 @@ function enviarEstado() {
     sonidos: config().get('sonidos', false),
     visitantes: config().get('visitantes', true),
     carruseles: contexto.globalState.get('koala.carruseles') || null,
+    sincronizacion: estadoSincronizacion(),
   });
 }
 
@@ -697,7 +720,7 @@ async function elegirCiudad() {
 }
 
 function revisarRutina() {
-  if (!rutina) return;
+  if (!rutina || (lider && !lider.esLider())) return; // saludos y logros, una sola vez aunque haya varias ventanas
   const u = resumenUso();
   rutina.revisar({
     inactivoMin: minutosInactivo(),
@@ -736,6 +759,7 @@ class ProveedorVista {
       else if (msg.tipo === 'accion') ejecutarAccion(msg.accion);
       else if (msg.tipo === 'efecto') aplicarEfecto(msg.accion);
       else if (msg.tipo === 'configurar') configurador.configurarMonitor();
+      else if (msg.tipo === 'sincronizarCuenta') sincronizarCuentaComando();
       else if (msg.tipo === 'agregarServicio') agregarServicio();
       else if (msg.tipo === 'activarApi') activarApi();
       else if (msg.tipo === 'elegirCiudad') elegirCiudad();
@@ -781,15 +805,143 @@ function alTerminarDescanso() {
   });
 }
 
+// ---------- Sincronización entre ventanas, editores y la cuenta de GitHub ----------
+// Ajustes del koala (clima, cumpleaños, pomodoro…): se copian entre editores que no comparten settings.json
+// (p. ej. VS Code y Antigravity). Solo los que pusiste tú (valor global), no los de cada carpeta.
+let clavesAjustes = [];
+let aplicandoAjustesHasta = 0;
+function leerAjustes() {
+  const a = {};
+  for (const k of clavesAjustes) {
+    const v = config().inspect(k);
+    if (v && v.globalValue !== undefined) a[k] = v.globalValue;
+  }
+  return a;
+}
+async function aplicarAjustes() {
+  const a = contexto.globalState.get('koala.ajustes') || {};
+  aplicandoAjustesHasta = Date.now() + 3000;
+  for (const k of clavesAjustes) {
+    const v = config().inspect(k);
+    const local = v ? v.globalValue : undefined;
+    if (JSON.stringify(local) === JSON.stringify(a[k])) continue;
+    try { await config().update(k, a[k], vscode.ConfigurationTarget.Global); } catch (e) { /* ajuste de solo lectura */ }
+  }
+  aplicandoAjustesHasta = Date.now() + 1500;
+  contexto.globalState.update('koala.ajustesVistos', leerAjustes());
+}
+function publicarAjustes() {
+  const a = leerAjustes();
+  compartido.update('koala.ajustes', a);
+  contexto.globalState.update('koala.ajustesVistos', a); // lo último que este editor sincronizó
+}
+// Solo una ventana configura el monitor (si no, varias escribirían ~/.claude/settings.json a la vez).
+function ofrecerMonitor() {
+  if (configurador && lider && lider.esLider()) configurador.ofrecerConfiguracion();
+}
+
+function alCambiarCompartido(claves) {
+  if (claves.includes(CLAVE_ESTADO)) recargarEstado();
+  if (claves.includes('koala.pomodoro') && pomodoro) pomodoro.recargar();
+  if (claves.includes('koala.alarmas') && alarmas) alarmas.recargar();
+  if (claves.some((k) => CLAVES_RUTINA.includes(k)) && rutina) rutina.recargar();
+  if (claves.includes('koala.ajustes')) aplicarAjustes();
+  if (claves.includes('koala.lugarClima')) medirClima().then(enviarEstado);
+  if (claves.includes('koala.monitorAceptado')) ofrecerMonitor();
+  enviarEstado();
+}
+
+let esperaNube = null;
+function alGuardarCompartido() {
+  if (!nube || !config().get('sincronizarConGitHub', false)) return;
+  clearTimeout(esperaNube);
+  esperaNube = setTimeout(() => nube.sincronizar(false), 20000); // junta varios cambios en una subida
+}
+
+function estadoSincronizacion() {
+  const e = nube && nube.estado();
+  return {
+    github: config().get('sincronizarConGitHub', false),
+    cuenta: e ? e.cuenta : '',
+    ultima: e ? e.cuando : null,
+    error: e ? e.error : null,
+    lider: lider ? lider.esLider() : true,
+  };
+}
+
+async function sincronizarCuentaComando() {
+  if (config().get('sincronizarConGitHub', false)) {
+    const e = nube.estado();
+    const detalle = e && e.error ? t('Último intento: {0}', e.error)
+      : e ? t('Cuenta {0} · última sincronización {1}', e.cuenta || 'GitHub', new Date(e.cuando).toLocaleTimeString()) : '';
+    const r = await vscode.window.showQuickPick([
+      { label: '$(sync) ' + t('Sincronizar ahora'), id: 'ahora', detail: detalle },
+      { label: '$(debug-disconnect) ' + t('Dejar de sincronizar con GitHub'), id: 'apagar' },
+    ], { placeHolder: t('El koala se sincroniza con tu cuenta de GitHub') });
+    if (!r) return;
+    if (r.id === 'apagar') {
+      await config().update('sincronizarConGitHub', false, vscode.ConfigurationTarget.Global);
+      vscode.window.showInformationMessage('🐨 ' + t('Listo: ya no se sincroniza con GitHub. Las ventanas de esta computadora siguen compartiendo el koala.'));
+      return;
+    }
+    const fin = await nube.sincronizar(true);
+    if (fin && fin.error) vscode.window.showWarningMessage('🐨 ' + t('No se pudo sincronizar: {0}', fin.error));
+    else vscode.window.showInformationMessage('🐨 ' + t('Sincronizado con tu cuenta de GitHub.'));
+    return;
+  }
+  const r = await vscode.window.showInformationMessage(
+    t('El koala guardará su estado (ánimo, pomodoro, alarmas, logros, ajustes y que ya aceptaste el monitor) en un Gist privado de tu cuenta de GitHub. Así es el mismo en otras computadoras, servidores por SSH y otros editores. No sube tus conversaciones ni tu consumo.'),
+    { modal: true }, t('Iniciar sesión con GitHub'));
+  if (!r) return;
+  try {
+    if (!(await nube.conectar(true))) return;
+  } catch (e) {
+    vscode.window.showErrorMessage('🐨 ' + e.message);
+    return;
+  }
+  await config().update('sincronizarConGitHub', true, vscode.ConfigurationTarget.Global);
+  const fin = await nube.sincronizar(true);
+  if (fin && fin.error) vscode.window.showWarningMessage('🐨 ' + t('No se pudo sincronizar: {0}', fin.error));
+  else vscode.window.showInformationMessage('🐨 ' + t('Listo: el koala se sincroniza con la cuenta de GitHub {0}. En otra computadora o servidor, usa este mismo comando.', nube.cuenta()));
+  enviarEstado();
+}
+
 // ---------- Activación ----------
 function activate(ctx) {
-  contexto = ctx;
   idioma.configurarIdioma(config().get('idioma', 'auto'), vscode.env.language);
   ctx.globalState.setKeysForSync([CLAVE_ESTADO, 'koala.logros', 'koala.contadores', 'koala.alarmas', 'koala.carruseles']); // ánimo, saciedad y energía viajan con Settings Sync
+  const propiedades = ((((ctx.extension || {}).packageJSON || {}).contributes || {}).configuration || {}).properties || {};
+  clavesAjustes = Object.keys(propiedades)
+    .map((k) => k.replace('koalaCientifico.', ''))
+    .filter((k) => k !== 'sincronizarConGitHub'); // se activa en cada editor (necesita iniciar sesión ahí)
+  compartido = crearCompartido({
+    ruta: RUTA_COMPARTIDO, globalState: ctx.globalState, claves: CLAVES_COMPARTIDAS,
+    alCambiar: alCambiarCompartido, alGuardar: alGuardarCompartido,
+  });
+  // Los módulos usan contexto.globalState como siempre, pero ahora es el compartido.
+  contexto = new Proxy(ctx, { get: (o, p) => (p === 'globalState' ? compartido : Reflect.get(o, p)) });
+  lider = crearLider({ ruta: RUTA_LIDER, id: `${vscode.env.sessionId}-${process.pid}`, enfocado: () => vscode.window.state.focused });
+  ctx.subscriptions.push(vscode.window.onDidChangeWindowState((e) => { if (e.focused) lider.latido(); }));
+  ctx.subscriptions.push({ dispose() { compartido.cerrar(); lider.cerrar(); } });
+  // Ajustes: si aquí no cambió nada desde la última vez, se adoptan los de los otros editores; si los
+  // cambiaste con este editor cerrado (o no hay de nadie), estos se vuelven los compartidos.
+  const vistos = ctx.globalState.get('koala.ajustesVistos');
+  const hayCompartidos = (compartido.todo().ts['koala.ajustes'] || 0) > 1;
+  if (hayCompartidos && (vistos === undefined || JSON.stringify(vistos) === JSON.stringify(leerAjustes()))) aplicarAjustes();
+  else publicarAjustes();
+  nube = crearNube({ compartido, config, esLider: () => lider.esLider(), alEstado: () => enviarEstado() });
   cargarEstado();
-  configurador = crearConfigurador({ extensionPath: ctx.extensionPath, globalState: ctx.globalState, dirClaude: DIR_CLAUDE });
+  configurador = crearConfigurador({
+    extensionPath: ctx.extensionPath, globalState: compartido, dirClaude: DIR_CLAUDE,
+    // Una vez que lo aceptas (en cualquier equipo), en cada servidor SSH o computadora nueva se configura solo.
+    automatico: () => !!compartido.get('koala.monitorAceptado') || config().get('configurarMonitorSolo', false),
+    alConfigurar: () => {
+      if (!compartido.get('koala.monitorAceptado')) compartido.update('koala.monitorAceptado', true);
+      if (!config().get('configurarMonitorSolo', false)) config().update('configurarMonitorSolo', true, vscode.ConfigurationTarget.Global);
+    },
+  });
   pomodoro = crearPomodoro({
-    contexto: ctx,
+    contexto,
     minutos: minutosDe,
     antesDeLargo: () => config().get('pomodoro.antesDeDescansoLargo', 4),
     alCambiar: () => {
@@ -817,6 +969,7 @@ function activate(ctx) {
     if (r) mostrarPanel();
   });
   comando('koalaCientifico.configurar', () => configurador.configurarMonitor());
+  comando('koalaCientifico.sincronizarCuenta', sincronizarCuentaComando);
   comando('koalaCientifico.pomodoro', () => pomodoro.alternar());
   comando('koalaCientifico.agregarServicio', agregarServicio);
   comando('koalaCientifico.consultarAnthropic', () => (config().get('usoDesdeAnthropic', false) ? consultarAnthropic(true) : activarApi()));
@@ -842,6 +995,9 @@ function activate(ctx) {
   ctx.subscriptions.push(...eventos);
 
   ctx.subscriptions.push(vscode.workspace.onDidChangeConfiguration((e) => {
+    // Lo que cambies a mano se copia a los demás editores (lo que llega de ellos no se reenvía).
+    if (e.affectsConfiguration('koalaCientifico') && Date.now() > aplicandoAjustesHasta) publicarAjustes();
+    if (e.affectsConfiguration('koalaCientifico.sincronizarConGitHub')) nube.sincronizar(true).then(enviarEstado);
     if (e.affectsConfiguration('koalaCientifico.idioma')) {
       idioma.configurarIdioma(config().get('idioma', 'auto'), vscode.env.language);
       if (vista) vista.webview.html = htmlVista(vista.webview, contexto.extensionUri);
@@ -864,7 +1020,7 @@ function activate(ctx) {
   }
 
   const reloj = setInterval(tick, 15 * 1000);
-  const relojActividad = setInterval(() => { revisarInactividad(); pomodoro.revisar(); contarActivo(); }, 1000);
+  const relojActividad = setInterval(() => { revisarInactividad(); pomodoro.revisar(Date.now(), lider.esLider()); contarActivo(); }, 1000);
   // Mediciones del entorno: más seguido solo con el panel a la vista.
   activo = Object.assign(activo, ctx.globalState.get(CLAVE_ACTIVO) || {});
   let vueltas = 0;
@@ -883,9 +1039,9 @@ function activate(ctx) {
     esperaDiag = setTimeout(() => { medirDiag(); enviarEstado(); }, 1500);
   }));
   setTimeout(medirTodo, 3000);
-  setTimeout(() => configurador.ofrecerConfiguracion(), 8000);
+  setTimeout(ofrecerMonitor, 8000);
   rutina = crearRutina({
-    contexto: ctx,
+    contexto,
     animar,
     notificar: (t) => vscode.window.showInformationMessage(t),
     config,
@@ -897,11 +1053,15 @@ function activate(ctx) {
   comando('koalaCientifico.agua', () => { rutina.agua(); enviarEstado(); });
   comando('koalaCientifico.elegirCiudad', elegirCiudad);
   comando('koalaCientifico.invitarVisitante', invitarVisitante);
-  alarmas = crearAlarmas({ contexto: ctx, alSonar: alSonarAlarma });
+  alarmas = crearAlarmas({ contexto, alSonar: alSonarAlarma });
   comando('koalaCientifico.nuevaAlarma', nuevaAlarmaComando);
   comando('koalaCientifico.alarmas', verAlarmasComando);
-  const relojAlarmas = setInterval(() => alarmas.revisar(), 5000);
-  setTimeout(() => alarmas.revisar(), 6000); // las atrasadas, cuando el panel ya pudo abrir
+  const relojAlarmas = setInterval(() => alarmas.revisar(new Date(), lider.esLider()), 5000);
+  setTimeout(() => alarmas.revisar(new Date(), lider.esLider()), 6000); // las atrasadas, cuando el panel ya pudo abrir
+  // Cuenta de GitHub (si la activaste): al abrir y cada 2 min; los cambios de aquí se suben a los 20 s.
+  setTimeout(() => nube.sincronizar(true), 2000);
+  const relojNube = setInterval(() => nube.sincronizar(false), 2 * 60000);
+  ctx.subscriptions.push({ dispose() { clearInterval(relojNube); clearTimeout(esperaNube); } });
   ctx.subscriptions.push({ dispose() { clearInterval(relojAlarmas); } });
   // Commits y pushes: el koala festeja (y se alegra: más ánimo).
   monitor.vigilarGit(alEventoGit).then((d) => ctx.subscriptions.push(d), () => {});

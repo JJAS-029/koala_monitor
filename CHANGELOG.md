@@ -1,5 +1,17 @@
 # Registro de cambios
 
+## 1.7.0
+- **Un solo koala en todas tus ventanas y editores**: las ventanas de VS Code, Antigravity, Cursor… de la misma
+  computadora comparten al instante ánimo, sueño, pomodoro, alarmas, logros, rutina del día, carruseles, ciudad del
+  clima y ajustes (archivo `~/.claude/koala/compartido.json`). Una sola ventana, la que tiene el foco, avanza el
+  pomodoro, suena las alarmas y saluda, para que nada se repita.
+- **Sincronizar con tu cuenta de GitHub** (opcional, comando o tarjeta *Sincronización*): el mismo estado viaja en un
+  Gist privado de tu cuenta, para tener el mismo koala en otras computadoras, servidores por SSH y editores. Usa el
+  inicio de sesión de GitHub del editor; no sube conversaciones ni consumo.
+- **El monitor se configura solo**: una vez que lo aceptas, en cada servidor SSH o computadora nueva se configura sin
+  preguntar (`koalaCientifico.configurarMonitorSolo`, que viaja en tus ajustes de usuario).
+- Arreglo: con VS Code en inglés, aceptar *Configure* en el ofrecimiento inicial no configuraba nada.
+
 ## 1.6.0
 - **Siesta en el eucalipto**: tras `koalaCientifico.minutosParaTreparse` (120) minutos de actividad seguida, el koala
   riega una semilla, crece un eucalipto, se trepa y se duerme en la rama. Baja cuando tomas un descanso de 10 min.

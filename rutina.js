@@ -100,6 +100,13 @@ function crearRutina({ contexto, animar, notificar, config }) {
   return {
     revisar,
     logro,
+    // Otra ventana o la nube cambiaron el día, los logros o los contadores.
+    recargar() {
+      dia = Object.assign(diaNuevo(), G.get('koala.dia') || {});
+      logros = G.get('koala.logros') || {};
+      cont = Object.assign({ commits: 0, pushes: 0, barridas: 0, visitas: 0, dias: 0 }, G.get('koala.contadores') || {});
+      ultimoError = G.get('koala.ultimoError') || ultimoError;
+    },
     agua() {
       dia.agua++;
       guardar();

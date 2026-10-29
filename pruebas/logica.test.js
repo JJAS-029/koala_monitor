@@ -297,3 +297,63 @@ test('idioma: toda frase del código tiene traducción al inglés', () => {
   const pkg = fs.readFileSync(path.join(raiz, 'package.json'), 'utf8');
   for (const m of pkg.matchAll(/"%([^%]+)%"/g)) assert.ok(nlsEn.includes(m[1]), 'falta ' + m[1] + ' en package.nls.json');
 });
+
+// ---------- Estado compartido entre ventanas ----------
+const os = require('os');
+const { crearCompartido, crearLider } = require(path.join(raiz, 'compartido.js'));
+const carpetaTemporal = () => fs.mkdtempSync(path.join(os.tmpdir(), 'koala-'));
+
+test('compartido: lo que guarda una ventana le llega a la otra', () => {
+  const ruta = path.join(carpetaTemporal(), 'compartido.json');
+  const cambios = [];
+  const a = crearCompartido({ ruta, globalState: memoria(), claves: ['koala.pomodoro', 'koala.alarmas'] });
+  const b = crearCompartido({ ruta, globalState: memoria(), claves: ['koala.pomodoro', 'koala.alarmas'], alCambiar: (c) => cambios.push(...c) });
+  a.update('koala.pomodoro', { fase: 'enfoque', fin: 123 });
+  b.revisar();
+  assert.deepEqual(b.get('koala.pomodoro'), { fase: 'enfoque', fin: 123 });
+  assert.deepEqual(cambios, ['koala.pomodoro']);
+  a.update('koala.avisos', { x: 1 }); // no compartida: se queda en esa ventana
+  b.revisar();
+  assert.equal(b.get('koala.avisos'), undefined);
+  a.cerrar(); b.cerrar();
+});
+
+test('compartido: lo sembrado al arrancar pierde contra un dato real', () => {
+  const ruta = path.join(carpetaTemporal(), 'compartido.json');
+  const viejo = memoria(); viejo.update('koala.alarmas', [{ id: 'vieja' }]);
+  const a = crearCompartido({ ruta, globalState: viejo, claves: ['koala.alarmas'] });
+  assert.equal(a.todo().ts['koala.alarmas'], 1);
+  const otro = a.aplicar({ datos: { 'koala.alarmas': [{ id: 'nueva' }] }, ts: { 'koala.alarmas': Date.now() } });
+  assert.deepEqual(otro, ['koala.alarmas']);
+  assert.deepEqual(a.get('koala.alarmas'), [{ id: 'nueva' }]);
+  assert.deepEqual(viejo.get('koala.alarmas'), [{ id: 'nueva' }]); // también queda en el globalState
+  // y algo más viejo que lo que ya tiene no entra
+  a.aplicar({ datos: { 'koala.alarmas': [] }, ts: { 'koala.alarmas': 5 } });
+  assert.deepEqual(a.get('koala.alarmas'), [{ id: 'nueva' }]);
+  a.cerrar();
+});
+
+test('compartido: guardar lo mismo no cambia la fecha (no sube nada a la nube)', () => {
+  const ruta = path.join(carpetaTemporal(), 'compartido.json');
+  const guardadas = [];
+  const a = crearCompartido({ ruta, globalState: memoria(), claves: ['koala.dia'], alGuardar: (k) => guardadas.push(k) });
+  a.update('koala.dia', { agua: 2 });
+  a.update('koala.dia', { agua: 2 });
+  assert.deepEqual(guardadas, ['koala.dia']);
+  a.cerrar();
+});
+
+test('líder: solo una ventana a la vez; la enfocada toma el lugar', () => {
+  const ruta = path.join(carpetaTemporal(), 'lider.json');
+  let enfocadaB = false;
+  const a = crearLider({ ruta, id: 'A', enfocado: () => false });
+  const b = crearLider({ ruta, id: 'B', enfocado: () => enfocadaB });
+  assert.equal(a.esLider(), true);
+  assert.equal(b.esLider(), false);
+  enfocadaB = true; b.latido(); a.latido();
+  assert.equal(b.esLider(), true);
+  assert.equal(a.esLider(), false);
+  b.cerrar(); a.latido(); // al cerrarse la líder, otra toma su lugar
+  assert.equal(a.esLider(), true);
+  a.cerrar();
+});

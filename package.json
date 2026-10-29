@@ -2,7 +2,7 @@
   "name": "koala-cientifico",
   "displayName": "%nombre%",
   "description": "%descripcion%",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "publisher": "jjas-029",
   "license": "MIT",
   "icon": "media/icono.png",
@@ -128,6 +128,11 @@
       {
         "command": "koalaCientifico.invitarVisitante",
         "title": "%cmd.invitarVisitante%",
+        "category": "%categoria%"
+      },
+      {
+        "command": "koalaCientifico.sincronizarCuenta",
+        "title": "%cmd.sincronizarCuenta%",
         "category": "%categoria%"
       },
       {
@@ -292,6 +297,16 @@
           "default": 20,
           "minimum": 0,
           "description": "%cfg.minutosParaSiesta%"
+        },
+        "koalaCientifico.sincronizarConGitHub": {
+          "type": "boolean",
+          "default": false,
+          "description": "%cfg.sincronizarConGitHub%"
+        },
+        "koalaCientifico.configurarMonitorSolo": {
+          "type": "boolean",
+          "default": false,
+          "description": "%cfg.configurarMonitorSolo%"
         },
         "koalaCientifico.minutosParaTreparse": {
           "type": "number",

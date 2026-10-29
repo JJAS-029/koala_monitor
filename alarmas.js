@@ -59,8 +59,9 @@ function crearAlarmas({ contexto, alSonar }) {
   const pospuestas = []; // { hasta: ms, alarma } solo en memoria
   const guardar = () => contexto.globalState.update('koala.alarmas', lista);
 
-  function revisar(ahora = new Date()) {
-    for (const a of lista) {
+  // lider = false: otra ventana se encarga de sonar las alarmas (las pospuestas aquí sí suenan aquí).
+  function revisar(ahora = new Date(), lider = true) {
+    for (const a of lider ? lista : []) {
       const atraso = debeSonar(a, ahora);
       if (atraso === null) continue;
       a.ultimaVez = fechaTexto(ahora);
@@ -75,6 +76,7 @@ function crearAlarmas({ contexto, alSonar }) {
 
   return {
     revisar,
+    recargar() { lista = contexto.globalState.get('koala.alarmas') || []; },
     lista: () => lista.map((a) => ({ ...a, texto: describirRepeticion(a.repeticion) })),
     crear({ hora, mensaje, repeticion }) {
       if (minutosDelDia(hora) === null) throw new Error(t('Hora inválida (usa HH:MM)'));

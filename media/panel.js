@@ -78,7 +78,7 @@
     [T('Hoy'), [['resumen', T('Resumen del día')], ['proyectos', T('Por proyecto')], ['modelos', T('Por modelo')],
       ['herramientas', T('Herramientas de Claude')], ['git', 'Git'], ['problemas', T('Problemas del proyecto')],
       ['calor', T('Uso de Claude por hora (7 días)')], ['logros', T('Logros')]]],
-    [T('Sistema'), [['servidor', T('Servidor')], ['clima', T('Clima')], ['servicios', T('Servicios')]]],
+    [T('Sistema'), [['servidor', T('Servidor')], ['clima', T('Clima')], ['servicios', T('Servicios')], ['sincronizacion', T('Sincronización')]]],
   ];
   const TARJETAS = [].concat(...GRUPOS.map((g) => g[1]));
   const IDS = TARJETAS.map((x) => x[0]);
@@ -460,6 +460,13 @@
         T('Elige tu ciudad para ver el clima real en la ventana y el termómetro (necesita internet). El koala no detecta tu ubicación por su cuenta.') + '</div>';
     pintar('c-clima', cuerpoClima +
       '<button class="boton-chico" data-msg="elegirCiudad">' + (cl && !cl.error ? T('Cambiar ciudad') : T('Elegir ciudad')) + '</button>');
+    const si = est.sincronizacion || {};
+    pintar('c-sincronizacion', '<div class="nota">✓ ' + T('Todas las ventanas y editores de esta computadora (VS Code, Antigravity…) comparten el mismo koala.') + '</div>' +
+      (si.github
+        ? '<div class="nota">' + (si.error ? '⚠ ' + esc(si.error) : '✓ ' + T('Cuenta de GitHub {0}', esc(si.cuenta || '')) + (si.ultima ? ' · ' + hace(si.ultima) : '')) + '</div>' +
+          '<button class="boton-chico" data-msg="sincronizarCuenta">' + T('Sincronizar ahora') + '</button>'
+        : '<div class="nota">' + T('Con tu cuenta de GitHub, el koala es el mismo en otras computadoras y servidores por SSH (un Gist privado).') + '</div>' +
+          '<button class="boton-chico" data-msg="sincronizarCuenta">' + T('Sincronizar con mi cuenta de GitHub') + '</button>'));
     const lista = est.servicios || [];
     const filas = lista.map((x) => '<div class="servicio" title="' + esc(x.url) + '"><span class="luz' + (x.ok ? '' : ' mal') + '"></span>' +
       '<span class="nom">' + esc(x.nombre) + '</span><span class="val">' + esc(x.ok ? (x.ms + ' ms') : x.detalle) + '</span>' +

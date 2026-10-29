@@ -52,9 +52,10 @@ function crearPomodoro({ contexto, minutos, antesDeLargo = () => 4, alCambiar = 
       cambio();
     },
     detener() { p.fase = null; p.pausa = null; cambio(); },
-    revisar(ahora = Date.now()) {
-      if (!p.fase) return;
-      if (p.pausa === null && ahora >= p.fin) {
+    // puedeCambiar = false en las ventanas que no son la líder: solo pintan el reloj (otra avanza la fase).
+    revisar(ahora = Date.now(), puedeCambiar = true) {
+      if (!p.fase) { pintar(); return; }
+      if (p.pausa === null && ahora >= p.fin && puedeCambiar) {
         if (p.fase === 'enfoque') {
           if (p.fecha !== fechaTexto()) { p.hoy = 0; p.fecha = fechaTexto(); }
           p.hoy++;
@@ -70,6 +71,11 @@ function crearPomodoro({ contexto, minutos, antesDeLargo = () => 4, alCambiar = 
       pintar();
     },
     usarBarra(b) { barra = b; pintar(); },
+    // Otra ventana o la nube cambiaron el pomodoro.
+    recargar() {
+      Object.assign(p, { fase: null, pausa: null }, contexto.globalState.get('koala.pomodoro') || {});
+      pintar();
+    },
     fase: () => p.fase,
     hoy: () => p.hoy,
     estado: () => ({ fase: p.fase, total: p.total, restante: restante(), pausado: p.pausa !== null, hoy: p.hoy, enfoque: minutos('enfoque') }),

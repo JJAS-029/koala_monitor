@@ -5,6 +5,7 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { execFile } = require('child_process');
 const { t } = require('./idioma');
 
@@ -28,7 +29,8 @@ async function encontrarPython() {
 // Rutas con / para que funcionen igual en bash, Git Bash (Windows) y cmd.
 const rutaComando = (p) => p.split(path.sep).join('/');
 
-function crearConfigurador({ extensionPath, globalState, dirClaude }) {
+// automatico(): el usuario ya aceptó el monitor una vez (en cualquier equipo); alConfigurar(): ya quedó.
+function crearConfigurador({ extensionPath, globalState, dirClaude, automatico = () => false, alConfigurar = () => {} }) {
   const DIR_SCRIPTS = path.join(dirClaude, 'koala');
   const RUTA_SETTINGS = path.join(dirClaude, 'settings.json');
   const DIR_CLAUDE = dirClaude;
@@ -46,9 +48,11 @@ function crearConfigurador({ extensionPath, globalState, dirClaude }) {
     try { return fs.readFileSync(RUTA_SETTINGS, 'utf8').includes('koala-hook.py'); } catch (e) { return false; }
   }
 
-  // En una computadora nueva: ofrecerlo una sola vez.
+  // En una computadora o servidor nuevo: si ya lo aceptaste antes, se configura solo; si no, se ofrece una vez.
   async function ofrecerConfiguracion() {
-    if (monitorConfigurado() || globalState.get('koala.ofrecido')) return;
+    if (monitorConfigurado()) { alConfigurar(); return; }
+    if (automatico()) return configurarMonitor(true, true);
+    if (globalState.get('koala.ofrecido')) return;
     globalState.update('koala.ofrecido', true);
     const r = await vscode.window.showInformationMessage(
       '🐨 ' + t('¿Conecto al koala con Claude Code en esta computadora? (sabrá cuándo trabaja Claude, cuándo te necesita y cuánto llevas de tu plan)'),
@@ -56,8 +60,9 @@ function crearConfigurador({ extensionPath, globalState, dirClaude }) {
     if (r === t('Configurar')) configurarMonitor(true);
   }
 
-  async function configurarMonitor(yaConfirmado) {
-    const ok = yaConfirmado === true ? 'Configurar' : await vscode.window.showInformationMessage(
+  // silencioso: sin preguntar (ya lo aceptaste antes); si algo necesita tu decisión, avisa sin insistir.
+  async function configurarMonitor(yaConfirmado, silencioso) {
+    const ok = yaConfirmado === true ? t('Configurar') : await vscode.window.showInformationMessage(
       t('El koala agregará a ~/.claude/settings.json una status line (para leer el % de sesión y semana) y hooks (para saber cuándo trabaja Claude, cuándo termina y cuándo te necesita). Se guarda un respaldo antes.'),
       { modal: true },
       t('Configurar')
@@ -65,7 +70,7 @@ function crearConfigurador({ extensionPath, globalState, dirClaude }) {
     if (ok !== t('Configurar')) return;
     const py = await encontrarPython();
     if (!py) {
-      const r = await vscode.window.showErrorMessage(
+      const r = await vscode.window[silencioso ? 'showWarningMessage' : 'showErrorMessage'](
         t('El monitor necesita Python 3 y no lo encontré (probé python3, python y py). Instálalo y vuelve a intentarlo; la mascota y el pomodoro funcionan sin él.'),
         t('Descargar Python'));
       if (r) vscode.env.openExternal(vscode.Uri.parse('https://www.python.org/downloads/'));
@@ -82,7 +87,7 @@ function crearConfigurador({ extensionPath, globalState, dirClaude }) {
       const actual = ajustes.statusLine && String(ajustes.statusLine.command || '');
       if (actual && !actual.includes('koala-statusline')) {
         const r = await vscode.window.showWarningMessage(
-          t('Ya tienes una status line ({0}). ¿Reemplazarla por la del koala?', actual), { modal: true }, t('Reemplazar'));
+          t('Ya tienes una status line ({0}). ¿Reemplazarla por la del koala?', actual), { modal: !silencioso }, t('Reemplazar'));
         if (r !== t('Reemplazar')) return;
       }
       fs.writeFileSync(`${RUTA_SETTINGS}.koala-respaldo-${Date.now()}`, texto);
@@ -100,7 +105,10 @@ function crearConfigurador({ extensionPath, globalState, dirClaude }) {
       }
       fs.mkdirSync(DIR_CLAUDE, { recursive: true });
       fs.writeFileSync(RUTA_SETTINGS, JSON.stringify(ajustes, null, 2) + '\n');
-      vscode.window.showInformationMessage('🐨 ' + t('Monitor configurado. Los porcentajes llegarán con la siguiente respuesta de Claude Code.'));
+      alConfigurar();
+      vscode.window.showInformationMessage('🐨 ' + (silencioso
+        ? t('Monitor de Claude Code configurado automáticamente en {0} (ya lo habías aceptado).', os.hostname())
+        : t('Monitor configurado. Los porcentajes llegarán con la siguiente respuesta de Claude Code.')));
     } catch (e) {
       vscode.window.showErrorMessage(t('No se pudo configurar el monitor: {0}', e.message));
     }

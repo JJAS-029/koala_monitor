@@ -32,6 +32,8 @@ const vscodeFalso = {
   DiagnosticSeverity: { Error: 0, Warning: 1 },
   ConfigurationTarget: { Global: 1 },
   window: {
+    state: { focused: true },
+    onDidChangeWindowState: evento(),
     registerWebviewViewProvider: (id, p) => { proveedor = p; return { dispose() {} }; },
     createStatusBarItem: () => ({ show() {}, hide() {}, dispose() {} }),
     showWarningMessage: async () => undefined,
@@ -40,7 +42,7 @@ const vscodeFalso = {
     onDidOpenTerminal: evento(), onDidChangeActiveTerminal: evento(),
   },
   workspace: {
-    getConfiguration: () => ({ get: (k, d) => (k in ajustes ? ajustes[k] : d), update: async () => {} }),
+    getConfiguration: () => ({ get: (k, d) => (k in ajustes ? ajustes[k] : d), inspect: (k) => ({ globalValue: ajustes[k] }), update: async () => {} }),
     onDidChangeTextDocument: evento(), onDidChangeConfiguration: evento(),
   },
   languages: {
@@ -48,7 +50,8 @@ const vscodeFalso = {
     onDidChangeDiagnostics: evento(),
   },
   extensions: { getExtension: () => undefined },
-  env: { openExternal: async () => true, language: 'es' },
+  env: { openExternal: async () => true, language: 'es', sessionId: 'vista-previa' },
+  authentication: { getSession: async () => undefined },
   commands: { registerCommand: () => ({ dispose() {} }), executeCommand: async () => {} },
 };
 // API_FALSA=1: activa la consulta a Anthropic y responde con datos de ejemplo (no sale a internet).

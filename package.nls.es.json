@@ -65,5 +65,8 @@
   "cfg.sonidos": "Sonidos cortos al terminar Claude o un pomodoro, al festejar un commit y al desbloquear un logro.",
   "cfg.servicios": "Servicios que el koala vigila cada minuto (responde = verde). Ejemplo: { \"nombre\": \"Django\", \"url\": \"http://127.0.0.1:8000/\" }.",
   "cfg.barraDeEstado": "Mostrar el consumo de Claude Code en la barra de estado de VS Code.",
-  "cmd.invitarVisitante": "invitar a un visitante"
+  "cmd.invitarVisitante": "invitar a un visitante",
+  "cmd.sincronizarCuenta": "sincronizar con mi cuenta de GitHub",
+  "cfg.sincronizarConGitHub": "Guarda el estado del koala (ánimo, pomodoro, alarmas, logros, ajustes) en un Gist privado de tu cuenta de GitHub para que sea el mismo en otras computadoras, servidores por SSH y editores. Actívalo con el comando «Koala científico: sincronizar con mi cuenta de GitHub».",
+  "cfg.configurarMonitorSolo": "Configurar el monitor de Claude Code sin preguntar en cada computadora o servidor SSH nuevo (se activa solo cuando lo aceptas una vez)."
 }

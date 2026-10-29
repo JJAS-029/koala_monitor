@@ -7,7 +7,7 @@ import zipfile
 from xml.sax.saxutils import escape
 
 RAIZ = os.path.dirname(os.path.abspath(__file__))
-ARCHIVOS = ["package.json", "extension.js", "monitor.js", "costos.js", "rutina.js", "alarmas.js", "vista.js", "consumo.js", "anthropic.js", "pomodoro.js", "configurar.js", "idioma.js", "l10n/en.json", "package.nls.json", "package.nls.es.json", "README.md", "CHANGELOG.md", "LICENSE", "media/koala.js", "media/panel.js", "media/icono.png",
+ARCHIVOS = ["package.json", "extension.js", "monitor.js", "costos.js", "rutina.js", "alarmas.js", "vista.js", "consumo.js", "anthropic.js", "pomodoro.js", "configurar.js", "compartido.js", "nube.js", "idioma.js", "l10n/en.json", "package.nls.json", "package.nls.es.json", "README.md", "CHANGELOG.md", "LICENSE", "media/koala.js", "media/panel.js", "media/icono.png",
             "scripts/koala-statusline.py", "scripts/koala-hook.py"]
 
 pkg = json.load(open(os.path.join(RAIZ, "package.json"), encoding="utf-8"))

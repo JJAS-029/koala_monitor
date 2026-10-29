@@ -192,6 +192,15 @@ to force it.*
    Requiere Python 3 (`python3`; en Windows, `python`). Si usas Claude Code por SSH, instala la
    extensión en el remoto (corre donde está `~/.claude`).
 
+## Sincronización
+- **En esta computadora**: todas las ventanas y editores (VS Code, Antigravity, Cursor…) comparten el mismo koala al
+  instante: ánimo, pomodoro, alarmas, logros, ciudad del clima y ajustes. No necesita cuenta.
+- **Con tu cuenta de GitHub** (opcional): comando *Koala científico: sincronizar con mi cuenta de GitHub* o la tarjeta
+  *Sincronización*. Guarda ese estado en un Gist privado de tu cuenta y lo trae en otras computadoras, servidores por
+  SSH y editores (cada 2 min). No sube conversaciones, consumo ni tokens.
+- **Monitor en servidores SSH**: después de aceptarlo una vez, se configura solo en cada servidor nuevo
+  (`koalaCientifico.configurarMonitorSolo`).
+
 ## Llevarlo a otra computadora
 1. Copia el `.vsix` (en VS Code: clic derecho sobre el archivo → *Descargar…*; o por correo/USB).
 2. En la otra computadora: Extensiones → `…` → **Instalar desde VSIX…**.

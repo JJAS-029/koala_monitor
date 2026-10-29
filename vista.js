@@ -205,7 +205,7 @@ function htmlVista(webview, extensionUri) {
     <button id="btn-configurar">${t('Configurar monitor')}</button>
   </div>
   ${['fuente', 'ritmo', 'costo', 'huella', 'conversacion', 'cache', 'resumen', 'proyectos', 'modelos', 'herramientas', 'git',
-     'problemas', 'calor', 'logros', 'servidor', 'clima', 'servicios'].map((id) => `<div class="tj" data-tj="${id}" id="c-${id}"></div>`).join('\n  ')}
+     'problemas', 'calor', 'logros', 'servidor', 'clima', 'servicios', 'sincronizacion'].map((id) => `<div class="tj" data-tj="${id}" id="c-${id}"></div>`).join('\n  ')}
   </div>
   <script nonce="${nonce}">
     window.KOALA_DIC = ${JSON.stringify(idioma.diccionario() || {}).replace(/</g, '\\u003c')};
