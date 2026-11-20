@@ -130,7 +130,7 @@ function aplicarDesgaste(horas, conTrabajo) {
   necesidades.saciedad = limitar(necesidades.saciedad - 10 * horas);
   const hambre = necesidades.saciedad < 30;
   necesidades.animo = limitar(necesidades.animo - (hambre ? 10 : 7) * horas);
-  if (sincronizarEnergia()) return;
+  if (sincronizarEnergia(true)) return;
   if (durmiendo) necesidades.energia = limitar(necesidades.energia + 600 * horas);
   else necesidades.energia = limitar(necesidades.energia - (conTrabajo ? 12 : 6) * horas);
 }
@@ -366,16 +366,34 @@ function formatoFalta(ms) {
   return `${Math.floor(h / 24)} d ${h % 24} h`;
 }
 
-// Energía = lo que queda de la sesión de 5 h (dato oficial). Se recarga sola en el corte.
+// Energía = cuota de IA disponible: lo que queda de la sesión de 5 h de Claude y del límite de 5 h de Gemini en
+// Antigravity (el promedio de los que haya). Es la misma fórmula que usa el monitor de celular: los dos comparten
+// el estado del koala y, si calcularan distinto, la energía brincaría de un valor a otro.
 function energiaDeSesion() {
+  const valores = [];
   const v = ventanaVigente(oficial().five_hour);
-  if (!v) return null;
-  return v.reiniciada ? 100 : limitar(100 - v.pct);
+  if (v) valores.push(v.reiniciada ? 100 : limitar(100 - v.pct));
+  const ag = contexto ? cuotasAgy() : null;
+  if (ag && ag.estado === 'ok') {
+    const limites = ag.grupos.flatMap((g) => g.limites.map((l) => ({ ...l, grupo: g.nombre })));
+    const gemini5h = limites.find((l) => l.ventana === '5h' && /gemini/i.test(l.grupo));
+    if (gemini5h) valores.push(limitar(gemini5h.restantePct));
+    else if (limites.length) valores.push(limitar(limites.reduce((a, l) => a + l.restantePct, 0) / limites.length));
+  }
+  if (!valores.length) return null;
+  return Math.round(valores.reduce((a, b) => a + b, 0) / valores.length);
 }
-function sincronizarEnergia() {
-  const e = energiaDeSesion();
-  if (e === null) return false;
-  necesidades.energia = e;
+// conAnimo: en cada tick el ánimo acompaña a la cuota (contento con margen, baja cuando escasea), como en el celular.
+function sincronizarEnergia(conAnimo) {
+  const disp = energiaDeSesion();
+  if (disp === null) return false;
+  necesidades.energia = disp;
+  if (conAnimo && disp >= 65 && necesidades.animo < disp) {
+    necesidades.animo = limitar(Math.round(necesidades.animo + (disp - necesidades.animo) * 0.35));
+  } else if (conAnimo && disp <= 35 && necesidades.animo > disp) {
+    const piso = Math.max(15, disp);
+    necesidades.animo = limitar(Math.round(necesidades.animo - (necesidades.animo - piso) * 0.35));
+  }
   return true;
 }
 
@@ -684,7 +702,14 @@ function aplicarEfecto(accion) {
 
 function alEventoGit(ev) {
   if (rutina) (ev.tipo === 'commit' ? rutina.alCommit() : rutina.alPush());
-  necesidades.animo = limitar(necesidades.animo + (ev.tipo === 'commit' ? 8 : 5));
+  // Con cada commit el koala come y se alegra (los mismos valores que el monitor de celular).
+  if (ev.tipo === 'commit') {
+    necesidades.saciedad = limitar(necesidades.saciedad + 30);
+    necesidades.animo = limitar(necesidades.animo + 10);
+    durmiendo = false;
+  } else {
+    necesidades.animo = limitar(necesidades.animo + 5);
+  }
   guardarEstado();
   medirGit().then(() => {
     animar(ev.tipo === 'commit' ? 'festejarCommit' : 'festejarPush', { ...ev, racha: monitor.racha(gitInfo).dias });

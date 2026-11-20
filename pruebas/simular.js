@@ -352,8 +352,8 @@ escena('11-energia-ligada', 13, (e, tomar) => {
   const uso = usoDe(90, 40);
   e.enviar(estado({ uso, energiaLigada: true, necesidades: { saciedad: 80, animo: 80, energia: 10 } }));
   e.avanzar(1); tomar();
-  verificar(/ligada a tu sesión/.test(e.elementos['s-energia'].textContent), 'explica que la energía es la sesión de 5 h');
-  verificar(/a las \d\d:\d\d/.test(e.elementos['s-energia'].textContent), 'dice a qué hora se recarga');
+  verificar(/se recarga \d\d:\d\d/.test(e.elementos['s-energia'].textContent), 'dice a qué hora se recarga, en un renglón');
+  verificar(/cuotas de IA/.test(e.elementos['s-energia'].title || ''), 'el tooltip explica que la energía son tus cuotas de IA');
   e.enviar(estado({ uso, energiaLigada: true, durmiendo: true, necesidades: { saciedad: 80, animo: 80, energia: 10 } }));
   e.avanzar(2); tomar();
   verificar(/recargue la sesión/.test(e.elementos['estado'].textContent), 'duerme hasta el corte');

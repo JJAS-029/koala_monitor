@@ -2463,7 +2463,12 @@
     }
     const le = $('l-energia'), se = $('s-energia');
     if (le) le.title = est.energiaLigada ? T('Energía = lo que te queda de la sesión de 5 h de Claude Code') : T('Energía del koala (sin dato oficial de Claude Code)');
-    if (se) se.textContent = est.energiaLigada ? '⚡ ' + T('ligada a tu sesión de 5 h · se recarga {0}', horaReinicio()) : '';
+    if (se) {
+      // Corto para que quepa en un renglón; el detalle va en el tooltip.
+      const v = est.uso && est.uso.cinco;
+      se.textContent = !est.energiaLigada ? '' : v && v.reinicio ? '⚡ ' + T('se recarga {0}', hora24(v.reinicio)) : '⚡ ' + T('ligada a tus cuotas de IA');
+      se.title = est.energiaLigada ? T('Ligada a tus cuotas de IA (Claude y Gemini, 5 h) · se recarga {0}', horaReinicio()) : '';
+    }
     const r = est.rutina;
     const ba = $('b-agua'), na = $('n-agua');
     if (r && ba) { ba.style.width = Math.min(100, (100 * r.agua) / r.metaAgua) + '%'; ba.style.background = 'var(--vscode-charts-blue, #3794ff)'; }
@@ -2472,6 +2477,7 @@
     if (bd) bd.textContent = est.durmiendo ? T('Despertar') : T('Dormir');
   }
 
+  const hora24 = (ms) => { const d = new Date(ms); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
   function horaReinicio() {
     const v = est.uso && est.uso.cinco;
     if (!v || !v.reinicio) return T('en el próximo corte');
@@ -2553,7 +2559,7 @@
     const m = e.data;
     if (!m) return;
     if (m.tipo === 'estado') {
-      const antes = { trabajando: est.trabajando, durmiendo: est.durmiendo, necesita: !!est.claudeNecesita, siesta: enSiesta(), musica: musicaSonando(),
+      const antes = { trabajando: est.trabajando, claude: !!est.claude, agy: !!est.antigravityActivo, durmiendo: est.durmiendo, necesita: !!est.claudeNecesita, siesta: enSiesta(), musica: musicaSonando(),
         fase: est.pomodoro ? est.pomodoro.fase + ':' + est.pomodoro.pausado : '' };
       est = Object.assign(est, m);
       pintarNecesidades();
@@ -2564,7 +2570,7 @@
       pomoRecibido = Date.now();
       pintarPomodoroDom();
       const fase = est.pomodoro ? est.pomodoro.fase + ':' + est.pomodoro.pausado : '';
-      if (antes.trabajando !== est.trabajando || antes.durmiendo !== est.durmiendo || antes.fase !== fase || antes.necesita !== !!est.claudeNecesita || antes.siesta !== enSiesta() || antes.musica !== musicaSonando()) interrumpir();
+      if (antes.trabajando !== est.trabajando || antes.claude !== !!est.claude || antes.agy !== !!est.antigravityActivo || antes.durmiendo !== est.durmiendo || antes.fase !== fase || antes.necesita !== !!est.claudeNecesita || antes.siesta !== enSiesta() || antes.musica !== musicaSonando()) interrumpir();
     } else if (m.tipo === 'accion') {
       if (m.datos) datosAccion[m.accion] = m.datos;
       pendientes.push(m.accion);

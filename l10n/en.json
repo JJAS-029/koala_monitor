@@ -488,5 +488,8 @@
  "Uso de IA por hora (7 días)": "AI usage by hour (7 days)",
  "las dos": "both",
  "Gemini": "Gemini",
- "Claude y GPT": "Claude and GPT"
+ "Claude y GPT": "Claude and GPT",
+ "se recarga {0}": "recharges {0}",
+ "ligada a tus cuotas de IA": "tied to your AI quotas",
+ "Ligada a tus cuotas de IA (Claude y Gemini, 5 h) · se recarga {0}": "Tied to your AI quotas (Claude and Gemini, 5 h) · recharges {0}"
 }

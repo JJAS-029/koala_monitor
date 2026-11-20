@@ -1,5 +1,14 @@
 # Registro de cambios
 
+## 1.13.0
+Para que el koala se comporte igual en VS Code y en el monitor de celular (comparten su estado):
+- **Energía ligada a tus cuotas de IA**: el promedio de lo que queda de la sesión de 5 h de Claude y del límite de 5 h
+  de Gemini en Antigravity, con la misma fórmula del celular; el ánimo la acompaña (sube con margen, baja cuando
+  escasea). Antes cada uno calculaba distinto y la energía brincaba si los dos estaban abiertos.
+- **Come con cada commit**: +30 de saciedad y +10 de ánimo, y se despierta si dormía (antes solo +8 de ánimo).
+- El texto de la energía cabe en un renglón («⚡ se recarga 16:20»); el detalle va al pasar el mouse.
+- El texto del koala cambia al instante cuando empieza o termina Claude o Antigravity.
+
 ## Documentación (nov. 2026)
 - Capturas del README actualizadas: animaciones (ahora 9, con el eucalipto, la ofrenda, la piñata y los audífonos) y
   tarjetas del panel (Mascota, Cuotas de IA, Uso por hora y Sistema), con datos de demostración.
