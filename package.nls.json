@@ -67,6 +67,9 @@
   "cfg.barraDeEstado": "Show Claude Code usage in VS Code's status bar.",
   "cmd.invitarVisitante": "invite a visitor",
   "cmd.sincronizarCuenta": "sync with my GitHub account",
+  "cmd.antigravity": "check Antigravity quotas",
+  "cfg.antigravity.consultar": "Show your Antigravity quotas (5-hour and weekly limit per model group) using the official agy CLI (`agy -p /usage`, uses no tokens). Only if agy is installed.",
+  "cfg.antigravity.minutos": "Minutes between Antigravity quota checks.",
   "cfg.sincronizarConGitHub": "Stores the koala's state (mood, pomodoro, alarms, achievements, settings) in a private Gist on your GitHub account so it is the same on other computers, SSH servers and editors. Turn it on with the command «Science Koala: sync with my GitHub account».",
   "cfg.configurarMonitorSolo": "Set up the Claude Code monitor without asking on every new computer or SSH server (turns on by itself once you accept it)."
 }

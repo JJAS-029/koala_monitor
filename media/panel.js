@@ -72,7 +72,7 @@
   // Todas las tarjetas viven en #deposito; cada carrusel muestra una. Elegir una que ya está en otro carrusel las intercambia.
   const GRUPOS = [
     [T('Mascota'), [['mascota', T('Mascota')], ['alarmas', T('Alarmas')], ['pomodoro', T('Pomodoro')]]],
-    [T('Consumo'), [['limites', T('Límites de tu plan')], ['fuente', T('Fuente del dato')], ['ritmo', T('Ritmo y proyección')],
+    [T('Consumo'), [['limites', T('Límites de tu plan')], ['fuente', T('Fuente del dato')], ['antigravity', T('Antigravity · Cuotas')], ['ritmo', T('Ritmo y proyección')],
       ['costo', T('Costo equivalente en la API')], ['huella', T('Huella estimada')], ['conversacion', T('Conversación actual')],
       ['cache', T('Eficiencia de caché (hoy)')]]],
     [T('Hoy'), [['resumen', T('Resumen del día')], ['proyectos', T('Por proyecto')], ['modelos', T('Por modelo')],
@@ -267,6 +267,7 @@
         cache >= 50 ? T('Aceptable.') : T('Baja: muchas conversaciones nuevas o cambios de contexto.')) + '</div>';
 
     pintar('c-fuente', tarjetaFuente(u));
+    pintar('c-antigravity', tarjetaAntigravity());
     pintar('c-ritmo', ritmo + cifrasRitmo);
     pintar('c-costo', tarjetaCosto());
     pintar('c-huella', tarjetaHuella());
@@ -278,6 +279,37 @@
     if (v >= 1000) return '$' + Math.round(v).toLocaleString(LOCALE);
     if (v >= 100) return '$' + v.toFixed(0);
     return '$' + v.toFixed(2);
+  }
+
+  // Cuándo se renueva: la hora si es hoy; si no, el día y la hora.
+  function renueva(ms) {
+    const d = new Date(ms), hoy = new Date();
+    if (d.toDateString() === hoy.toDateString()) return hora(ms);
+    return d.toLocaleDateString(LOCALE, { weekday: 'short', day: 'numeric' }) + ' ' + hora(ms);
+  }
+  function tarjetaAntigravity() {
+    const ag = est.antigravity;
+    if (!ag) return '<div class="nota">' + T('Desactivado (koalaCientifico.antigravity.consultar).') + '</div>';
+    const boton = '<button class="boton-chico" data-msg="consultarAntigravity"' + (ag.consultando ? ' disabled' : '') + '>' +
+      (ag.consultando ? T('Consultando…') : '↻ ' + T('Actualizar')) + '</button>';
+    const nota = (h) => '<div class="nota">' + h + '</div>';
+    if (!ag.estado) return nota(T('Preguntando sus cuotas al CLI de Antigravity (agy)…')) + boton;
+    if (ag.estado === 'sin_agy') {
+      return nota(T('Instala el CLI oficial de Antigravity (<code>agy</code>) y ejecútalo una vez para iniciar sesión; luego toca ↻.')) + boton;
+    }
+    if (ag.estado === 'sin_sesion') return nota(T('Abre una terminal, ejecuta <code>agy</code> e inicia sesión con tu cuenta de Google; luego toca ↻.')) + boton;
+    if (ag.estado !== 'ok') return nota('⚠ ' + esc(ag.error || '')) + boton;
+    const ahora = Date.now();
+    const grupos = (ag.grupos || []).map((g) => '<div class="sub"><b>' + esc(g.nombre) + '</b></div>' +
+      g.limites.map((l) => {
+        const vencido = l.reinicio && l.reinicio <= ahora; // ya se renovó desde la última consulta
+        const libre = vencido ? 100 : l.restantePct;
+        return renglon(l.ventana === '5h' ? T('5 horas') : l.ventana === 'semana' ? T('Semana') : l.nombre,
+          T('{0} libre', pct(libre)), libre, nivel(100 - libre, 75, 90),
+          l.reinicio ? T('Se renueva {0}', renueva(l.reinicio)) : '');
+      }).join('') +
+      (g.modelos ? '<div class="sub" title="' + esc(g.modelos) + '">' + esc(g.modelos) + '</div>' : '')).join('');
+    return grupos + nota((ag.error ? '⚠ ' + esc(ag.error) + ' · ' : '') + T('Dato de agy /usage, {0}.', hace(ag.actualizado))) + boton;
   }
 
   function tarjetaFuente(u) {

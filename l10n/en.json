@@ -460,5 +460,19 @@
  "Este editor no permite iniciar sesión con GitHub ({0}).": "This editor can't sign in with GitHub ({0}).",
  "Koala científico: estado sincronizado (no lo borres)": "Science Koala: synced state (don't delete it)",
  "Falta iniciar sesión en GitHub": "You need to sign in to GitHub",
- "Monitor de Claude Code configurado automáticamente en {0} (ya lo habías aceptado).": "Claude Code monitor set up automatically on {0} (you had already accepted it)."
+ "Monitor de Claude Code configurado automáticamente en {0} (ya lo habías aceptado).": "Claude Code monitor set up automatically on {0} (you had already accepted it).",
+ "Antigravity: te queda {0} % de {1} ({2})": "Antigravity: {0}% left of {1} ({2})",
+ "5 h": "5 h",
+ "semana": "week",
+ "Antigravity · Cuotas": "Antigravity · Quotas",
+ "Desactivado (koalaCientifico.antigravity.consultar).": "Turned off (koalaCientifico.antigravity.consultar).",
+ "Consultando…": "Checking…",
+ "Actualizar": "Refresh",
+ "Preguntando sus cuotas al CLI de Antigravity (agy)…": "Asking the Antigravity CLI (agy) for your quotas…",
+ "Instala el CLI oficial de Antigravity (<code>agy</code>) y ejecútalo una vez para iniciar sesión; luego toca ↻.": "Install the official Antigravity CLI (<code>agy</code>) and run it once to sign in; then tap ↻.",
+ "Abre una terminal, ejecuta <code>agy</code> e inicia sesión con tu cuenta de Google; luego toca ↻.": "Open a terminal, run <code>agy</code> and sign in with your Google account; then tap ↻.",
+ "5 horas": "5 hours",
+ "{0} libre": "{0} left",
+ "Se renueva {0}": "Renews {0}",
+ "Dato de agy /usage, {0}.": "From agy /usage, {0}."
 }

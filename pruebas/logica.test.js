@@ -357,3 +357,37 @@ test('líder: solo una ventana a la vez; la enfocada toma el lugar', () => {
   assert.equal(a.esLider(), true);
   a.cerrar();
 });
+
+// ---------- Antigravity: cuotas con `agy -p /usage --output-format json` ----------
+const antigravity = require(path.join(raiz, 'antigravity.js'));
+// Respuesta real de agy (nov. 2026), recortada.
+const USO_AGY = JSON.stringify({
+  conversation_id: '', status: 'SUCCESS', num_turns: 0,
+  response: 'Gemini Models\tWeekly Limit Remaining\t74%\t2026-11-26T19:03:53Z\nGemini Models\tFive Hour Limit Remaining\t95%\t2026-11-20T22:15:30Z\n',
+  command: { name: 'usage', data: { groups: [
+    { name: 'Gemini Models', description: 'Models within this group: Gemini 4 Neon, Gemini 3.8 Flash', buckets: [
+      { id: 'gemini-weekly', name: 'Weekly Limit Remaining', window: 'weekly', remaining_fraction: 0.7413000464439392, reset_time: '2026-11-26T19:03:53Z' },
+      { id: 'gemini-5h', name: 'Five Hour Limit Remaining', window: '5h', remaining_fraction: 0.9545455574989319, reset_time: '2026-11-20T22:15:30Z' }] },
+    { name: 'Gemini 4 Argon', description: 'For paid Pro plans, Argon quota is separate.', buckets: [
+      { id: 'gemini-argon-wtu-weekly', name: 'Gemini 4 Argon Weekly Limit', window: 'weekly', remaining_fraction: 1, reset_time: '2026-11-26T19:15:33Z' }] },
+  ] } },
+});
+
+test('antigravity: lee los grupos y límites de la respuesta de agy', () => {
+  const { grupos } = antigravity.leerUso(USO_AGY);
+  assert.equal(grupos.length, 2);
+  assert.equal(grupos[0].nombre, 'Gemini Models');
+  assert.equal(grupos[0].modelos, 'Gemini 4 Neon, Gemini 3.8 Flash');
+  assert.deepEqual(grupos[0].limites.map((l) => [l.ventana, l.restantePct]), [['semana', 74], ['5h', 95]]);
+  assert.equal(grupos[0].limites[1].reinicio, Date.parse('2026-11-20T22:15:30Z'));
+  assert.equal(grupos[1].modelos, ''); // la descripción no es una lista de modelos
+  assert.equal(grupos[1].limites[0].restantePct, 100);
+});
+
+test('antigravity: sin datos estructurados usa el texto con tabuladores', () => {
+  const soloTexto = JSON.stringify({ status: 'SUCCESS', response: JSON.parse(USO_AGY).response });
+  const { grupos } = antigravity.leerUso(soloTexto);
+  assert.deepEqual(grupos.map((g) => g.limites.map((l) => [l.ventana, l.restantePct])), [[['semana', 74], ['5h', 95]]]);
+  assert.deepEqual(antigravity.leerUso('').grupos, []);
+  assert.deepEqual(antigravity.leerUso('Error: algo falló').grupos, []);
+});

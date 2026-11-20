@@ -192,6 +192,12 @@ to force it.*
    Requiere Python 3 (`python3`; en Windows, `python`). Si usas Claude Code por SSH, instala la
    extensión en el remoto (corre donde está `~/.claude`).
 
+## Antigravity
+La tarjeta *Antigravity · Cuotas* muestra, por grupo de modelos, cuánto te queda del límite de 5 h y del semanal y
+cuándo se renueva. Necesita el CLI oficial `agy` con tu sesión iniciada (ejecuta `agy` una vez en una terminal).
+El koala lo busca en el PATH y en `%LOCALAPPDATA%gyin`. Usa `agy -p /usage`, que no gasta tokens; se apaga con
+`koalaCientifico.antigravity.consultar`.
+
 ## Sincronización
 - **En esta computadora**: todas las ventanas y editores (VS Code, Antigravity, Cursor…) comparten el mismo koala al
   instante: ánimo, pomodoro, alarmas, logros, ciudad del clima y ajustes. No necesita cuenta.
@@ -220,6 +226,9 @@ MIT. Código en https://github.com/JJAS-029/koala_monitor.
 - Pruebas de la lógica: `npm test` (o `node --test pruebas/*.test.js`): alarmas, costos, consumo, rachas,
   logros, pomodoro, respuesta de Anthropic.
 - Pruebas de las animaciones sin navegador: `node pruebas/simular.js [carpeta]` (capturas PNG por acción).
+- Ensayo de activación: `node pruebas/ensayo-activacion.js` (dos editores simulados con un contexto como el real;
+  con `monitor`, que el monitor se configure solo en un equipo nuevo). Sin `node`, sirve el de VS Code:
+  `ELECTRON_RUN_AS_NODE=1 "<ruta a Code.exe>" pruebas/ensayo-activacion.js`.
 - Vista previa real del panel: `pruebas/vista-previa.js` (activa la extensión con un VS Code simulado
   y captura cada pestaña con Chromium sin interfaz; ver el encabezado del archivo).
 - Icono: `node pruebas/icono.js`. Capturas del readme: `node pruebas/capturas-readme.js` y

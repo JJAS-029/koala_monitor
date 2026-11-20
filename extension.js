@@ -18,6 +18,7 @@ const { crearPomodoro } = require('./pomodoro');
 const { crearConfigurador } = require('./configurar');
 const { crearCompartido, crearLider } = require('./compartido');
 const { crearNube } = require('./nube');
+const antigravity = require('./antigravity');
 const {
   crearConsumo, inicioVentana, ventanaVigente, formatoTokens, duracionTexto, HORA, CINCO_HORAS, SIETE_DIAS,
 } = require('./consumo');
@@ -32,7 +33,7 @@ const CLAVE_AVISOS = 'koala.avisos';
 // Lo que comparten todas las ventanas y editores de esta computadora (y la cuenta de GitHub, si la activas).
 const CLAVES_RUTINA = ['koala.dia', 'koala.logros', 'koala.contadores', 'koala.ultimoError'];
 const CLAVES_COMPARTIDAS = [CLAVE_ESTADO, 'koala.pomodoro', 'koala.alarmas', 'koala.carruseles', 'koala.lugarClima',
-  'koala.ajustes', 'koala.monitorAceptado', ...CLAVES_RUTINA];
+  'koala.ajustes', 'koala.monitorAceptado', 'koala.antigravity', ...CLAVES_RUTINA];
 const RUTA_COMPARTIDO = path.join(DIR_CLAUDE, 'koala', 'compartido.json');
 const RUTA_LIDER = path.join(DIR_CLAUDE, 'koala', 'lider.json');
 const TURNO_MAXIMO_MS = 15 * 60 * 1000;
@@ -443,6 +444,11 @@ function calcularAlertas(u) {
     if (sistema.memoria.pct >= 90) a.push({ nivel: 3, pestana: 'sistema', tarjeta: 'servidor', texto: t('Memoria del servidor al {0} %', Math.round(sistema.memoria.pct)) });
     for (const d of sistema.discos) if (d.pct >= 90) a.push({ nivel: 3, pestana: 'sistema', tarjeta: 'servidor', texto: t('Disco {0} al {1} %', d.ruta, Math.round(d.pct)) });
   }
+  for (const l of limitesAntigravity()) {
+    if (l.restantePct <= 100 - umbral) {
+      a.push({ nivel: 3, pestana: 'consumo', tarjeta: 'antigravity', texto: t('Antigravity: te queda {0} % de {1} ({2})', l.restantePct, l.grupo, l.ventana === '5h' ? t('5 h') : t('semana')) });
+    }
+  }
   if (u.ritmo.estado === 'alcanza') {
     a.push({ nivel: 2, pestana: 'consumo', tarjeta: 'ritmo', texto: t('A este ritmo llegas al 100 % a las {0}, antes del corte', horaCorta(u.ritmo.eta)) });
   }
@@ -455,6 +461,37 @@ function calcularAlertas(u) {
     if (g.cambios >= 1 && viejo) a.push({ nivel: 1, pestana: 'hoy', tarjeta: 'git', texto: g.cambios === 1 ? t('1 cambio sin commit en {0}', g.nombre) : t('{0} cambios sin commit en {1}', g.cambios, g.nombre) });
   }
   return a.sort((x, y) => y.nivel - x.nivel);
+}
+
+// ---------- Antigravity (cuotas con el CLI agy) ----------
+let consultandoAgy = false;
+let proximaConsultaAgy = 0;
+const cuotasAgy = () => contexto.globalState.get('koala.antigravity') || null;
+// Límites vigentes (dato de menos de 1 h y que todavía no se renuevan) con el nombre de su grupo.
+function limitesAntigravity() {
+  const c = cuotasAgy();
+  if (!c || c.estado !== 'ok' || Date.now() - c.actualizado > HORA) return [];
+  return c.grupos.flatMap((g) => g.limites.filter((l) => !l.reinicio || l.reinicio > Date.now()).map((l) => ({ ...l, grupo: g.nombre })));
+}
+// forzar: botón ↻ (aunque esta ventana no sea la líder ni toque todavía).
+async function consultarAntigravity(forzar) {
+  if (consultandoAgy || !config().get('antigravity.consultar', true)) return;
+  if (!forzar && (!lider.esLider() || Date.now() < proximaConsultaAgy)) return;
+  consultandoAgy = true;
+  enviarEstado();
+  try {
+    const r = await antigravity.consultar();
+    // Sin agy instalado no tiene caso preguntar cada pocos minutos.
+    const minutos = r.estado === 'sin_agy' ? 6 * 60 : Math.max(1, config().get('antigravity.minutos', 5));
+    proximaConsultaAgy = Date.now() + minutos * 60000;
+    // Un error pasajero no borra las últimas cuotas buenas.
+    const previo = cuotasAgy();
+    if (r.estado === 'error' && previo && previo.estado === 'ok') compartido.update('koala.antigravity', { ...previo, error: r.error });
+    else compartido.update('koala.antigravity', r);
+  } finally {
+    consultandoAgy = false;
+    enviarEstado();
+  }
 }
 
 function datosActivo() {
@@ -556,6 +593,7 @@ function enviarEstado() {
     visitantes: config().get('visitantes', true),
     carruseles: contexto.globalState.get('koala.carruseles') || null,
     sincronizacion: estadoSincronizacion(),
+    antigravity: config().get('antigravity.consultar', true) ? Object.assign({ consultando: consultandoAgy }, cuotasAgy() || {}) : null,
   });
 }
 
@@ -760,6 +798,7 @@ class ProveedorVista {
       else if (msg.tipo === 'efecto') aplicarEfecto(msg.accion);
       else if (msg.tipo === 'configurar') configurador.configurarMonitor();
       else if (msg.tipo === 'sincronizarCuenta') sincronizarCuentaComando();
+      else if (msg.tipo === 'consultarAntigravity') consultarAntigravity(true);
       else if (msg.tipo === 'agregarServicio') agregarServicio();
       else if (msg.tipo === 'activarApi') activarApi();
       else if (msg.tipo === 'elegirCiudad') elegirCiudad();
@@ -977,6 +1016,7 @@ function activate(ctx) {
   });
   comando('koalaCientifico.configurar', () => configurador.configurarMonitor());
   comando('koalaCientifico.sincronizarCuenta', sincronizarCuentaComando);
+  comando('koalaCientifico.antigravity', async () => { await consultarAntigravity(true); mostrarPanel(); });
   comando('koalaCientifico.pomodoro', () => pomodoro.alternar());
   comando('koalaCientifico.agregarServicio', agregarServicio);
   comando('koalaCientifico.consultarAnthropic', () => (config().get('usoDesdeAnthropic', false) ? consultarAnthropic(true) : activarApi()));
@@ -1005,6 +1045,7 @@ function activate(ctx) {
     // Lo que cambies a mano se copia a los demás editores (lo que llega de ellos no se reenvía).
     if (e.affectsConfiguration('koalaCientifico') && Date.now() > aplicandoAjustesHasta) publicarAjustes();
     if (e.affectsConfiguration('koalaCientifico.sincronizarConGitHub')) nube.sincronizar(true).then(enviarEstado);
+    if (e.affectsConfiguration('koalaCientifico.antigravity')) { proximaConsultaAgy = 0; enviarEstado(); }
     if (e.affectsConfiguration('koalaCientifico.idioma')) {
       idioma.configurarIdioma(config().get('idioma', 'auto'), vscode.env.language);
       if (vista) vista.webview.html = htmlVista(vista.webview, contexto.extensionUri);
@@ -1037,6 +1078,7 @@ function activate(ctx) {
     if (visible || vueltas % 6 === 0) await medirSistema();
     if (vueltas % 12 === 0) await medirServicios();
     await consultarAnthropic(false); // respeta su propio intervalo
+    consultarAntigravity(false); // solo la ventana líder, cada antigravity.minutos
     if (visible && vueltas % 6 === 0) await medirGit();
     if (visible) enviarEstado();
   }, 5000);

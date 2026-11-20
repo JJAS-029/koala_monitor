@@ -1,5 +1,15 @@
 # Registro de cambios
 
+## 1.8.0
+- **Cuotas de Antigravity**: tarjeta *Antigravity · Cuotas* (en Consumo) con el límite de 5 h y el semanal de cada
+  grupo de modelos (Gemini, Claude y GPT, Argon), cuánto queda y cuándo se renueva. Sale del CLI oficial `agy`
+  (`agy -p /usage --output-format json`, comando local que no gasta tokens), que se busca también en
+  `%LOCALAPPDATA%gyin` aunque no esté en el PATH. Botón ↻, comando *consultar cuotas de Antigravity* y alerta
+  cuando a un límite le queda poco. Solo la ventana líder consulta (cada `koalaCientifico.antigravity.minutos`) y las
+  demás ventanas, editores y el monitor de celular reciben el dato por el estado compartido.
+- `pruebas/ensayo-activacion.js`: activa la extensión con un contexto como el de VS Code real y dos editores
+  simulados (estado compartido, ajustes, líder, Antigravity y el monitor que se configura solo).
+
 ## 1.7.1
 - Arreglo: la 1.7.0 no arrancaba en VS Code («'get' on proxy: property 'globalState' is a read-only…»); el
   contexto compartido ya no usa un Proxy. La vista previa simula el contexto real para que no se repita.
