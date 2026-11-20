@@ -174,7 +174,23 @@ function htmlVista(webview, extensionUri) {
   .pildora { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 10px;
              background: color-mix(in srgb, var(--vscode-foreground) 10%, transparent); }
   .carrusel { border-radius: 16px; }
-  .renglon + .sub, .nota + .sub { margin-top: 8px; } /* aire antes de cada grupo (Cuotas de IA, Antigravity) */
+  .renglon + .sub, .nota + .sub { margin-top: 8px; } /* aire antes de cada grupo */
+  /* Cuotas: bloque por servicio con fondo suave; renglones con barra ondulada a lo ancho, color por modelo. */
+  .bloque { border-radius: 14px; padding: 7px 10px 6px; margin: 0 0 8px; background: color-mix(in srgb, var(--vscode-foreground) 6%, transparent); }
+  .bloque.claude { background: color-mix(in srgb, var(--c-claude) 13%, transparent); }
+  .bloque.gemini { background: color-mix(in srgb, var(--c-gemini) 13%, transparent); }
+  .bloque-tit { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 2px;
+                font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .bloque-tit .pildora { text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .cuota { margin: 6px 0 7px; }
+  .cuota-tit { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; }
+  .cuota-tit span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cuota-tit b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cuota .medidor { height: 10px; margin: 2px 0 1px; }
+  .medidor > i.claude { background: var(--c-claude); }
+  .medidor > i.gemini { background: var(--c-gemini); }
+  .cuota-sub { font-size: 10px; opacity: .65; }
+  .cuota-sub.modelos { margin: -3px 0 6px; }
   .alerta { border-radius: 10px; }
   .car-puntos i { transition: width .25s var(--resorte); }
   .car-puntos i.sel { width: 14px; }

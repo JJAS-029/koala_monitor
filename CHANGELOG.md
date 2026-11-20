@@ -1,5 +1,11 @@
 # Registro de cambios
 
+## 1.12.0
+- **Cuotas de todos los modelos en una tarjeta**, al estilo del monitor de celular: un bloque por servicio (Claude Code
+  y Antigravity) y un renglón por límite con barra ondulada a lo ancho, cuánto queda y cuándo se renueva. El color
+  sigue al modelo como en el mapa de calor (Claude y GPT azul, Gemini naranja); con 25 % o menos el número lleva ⚠.
+  La tarjeta *Antigravity · Cuotas* usa el mismo diseño y además lista los modelos de cada grupo.
+
 ## 1.11.0
 - **Toques de Material 3 Expressive** (idea del monitor de celular), con los colores del tema de VS Code: barras
   onduladas con indicador de fin (las de ánimo, energía, agua y pomodoro se mueven; con «reducir movimiento» se quedan

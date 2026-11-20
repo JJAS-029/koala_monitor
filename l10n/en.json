@@ -486,5 +486,7 @@
  "Sin el CLI agy.": "No agy CLI.",
  "Falta iniciar sesión en agy.": "You need to sign in to agy.",
  "Uso de IA por hora (7 días)": "AI usage by hour (7 days)",
- "las dos": "both"
+ "las dos": "both",
+ "Gemini": "Gemini",
+ "Claude y GPT": "Claude and GPT"
 }

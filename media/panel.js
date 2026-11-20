@@ -305,21 +305,35 @@
     }
     if (ag.estado === 'sin_sesion') return nota(T('Abre una terminal, ejecuta <code>agy</code> e inicia sesión con tu cuenta de Google; luego toca ↻.')) + boton;
     if (ag.estado !== 'ok') return nota('⚠ ' + esc(ag.error || '')) + boton;
-    return filasAntigravity(ag, '', true) + nota((ag.error ? '⚠ ' + esc(ag.error) + ' ' : '') + '<span class="pildora">' + T('Dato de agy /usage, {0}.', hace(ag.actualizado)) + '</span>') +
-      boton + botonHooksAgy(ag);
+    return bloqueAntigravity(ag, true) + (ag.error ? nota('⚠ ' + esc(ag.error)) : '') + boton + botonHooksAgy(ag);
   }
-  // Un renglón por límite: cuánto queda (la barra), con color por lo que ya se usó, y cuándo se renueva.
-  function renglonLibre(nombre, libre, reinicio) {
-    return renglon(nombre, T('{0} libre', pct(libre)), libre, nivel(100 - libre, 75, 90), reinicio ? T('Se renueva {0}', renueva(reinicio)) : '');
+
+  // ---------- Cuotas: un bloque por servicio y un renglón por límite, con barra ondulada a lo ancho ----------
+  // El color sigue al modelo, igual que en el mapa de calor: Claude (y GPT) azul, Gemini naranja.
+  const familiaDe = (nombre) => (/claude|gpt/i.test(nombre) ? 'claude' : 'gemini');
+  const NOMBRE_GRUPO = { 'Gemini Models': 'Gemini', 'Claude and GPT models': 'Claude y GPT' }; // los nombres vienen de agy
+  function filaCuota(nombre, libre, reinicio, familia, titulo) {
+    const bajo = libre <= 25; // poco margen: aviso con ícono, no solo con color
+    return '<div class="cuota"' + (titulo ? ' title="' + esc(titulo) + '"' : '') + '>' +
+      '<div class="cuota-tit"><span>' + esc(nombre) + '</span><b>' + (bajo ? '⚠ ' : '') + esc(T('{0} libre', pct(libre))) + '</b></div>' +
+      medidor(libre, familia) +
+      (reinicio ? '<div class="cuota-sub">' + esc(T('Se renueva {0}', renueva(reinicio))) + '</div>' : '') + '</div>';
   }
-  function filasAntigravity(ag, prefijo, conModelos) {
+  function bloque(titulo, familia, cuerpo, extra) {
+    return '<div class="bloque ' + familia + '"><div class="bloque-tit"><span>' + esc(titulo) + '</span>' + (extra || '') + '</div>' + cuerpo + '</div>';
+  }
+  function bloqueAntigravity(ag, conModelos) {
     const ahora = Date.now();
-    return (ag.grupos || []).map((g) => '<div class="sub"><b>' + esc(prefijo + g.nombre) + '</b></div>' +
-      g.limites.map((l) => {
+    const filas = (ag.grupos || []).map((g) => {
+      const grupo = T(NOMBRE_GRUPO[g.nombre] || g.nombre);
+      const familia = familiaDe(g.nombre + ' ' + g.modelos);
+      return g.limites.map((l) => {
         const libre = l.reinicio && l.reinicio <= ahora ? 100 : l.restantePct; // ya se renovó desde la última consulta
-        return renglonLibre(l.ventana === '5h' ? T('5 horas') : l.ventana === 'semana' ? T('Semana') : l.nombre, libre, l.reinicio);
-      }).join('') +
-      (conModelos && g.modelos ? '<div class="sub" title="' + esc(g.modelos) + '">' + esc(g.modelos) + '</div>' : '')).join('');
+        const ventana = l.ventana === '5h' ? T('5 horas') : l.ventana === 'semana' ? T('Semana') : l.nombre;
+        return filaCuota(grupo + ' · ' + ventana, libre, l.reinicio, familia, g.modelos);
+      }).join('') + (conModelos && g.modelos ? '<div class="cuota-sub modelos">' + esc(g.modelos) + '</div>' : '');
+    }).join('');
+    return bloque('Antigravity', 'neutro', filas, '<span class="pildora">' + esc(hace(ag.actualizado)) + '</span>');
   }
   // Si agy está pero sus hooks no, el koala no sabe cuándo trabaja su agente.
   function botonHooksAgy(ag) {
@@ -327,19 +341,17 @@
     return '<div class="nota">' + T('Conecta el koala con el agente de Antigravity para que se siente a trabajar con él.') + '</div>' +
       '<button class="boton-chico" data-msg="configurarAntigravity">' + T('Conectar con Antigravity') + '</button>';
   }
-  // Claude y Antigravity juntos: cuánto te queda de cada límite.
+  // Todos los modelos en una sola tarjeta: Claude Code y Antigravity.
   function tarjetaCuotas(u) {
     const nota = (h) => '<div class="nota">' + h + '</div>';
-    let html = '<div class="sub"><b>Claude Code</b></div>';
-    const claude = (v, nombre) => (v ? renglonLibre(nombre, v.reiniciada ? 100 : Math.max(0, 100 - v.pct), v.reiniciada ? null : v.reinicio) : '');
-    if (u && (u.cinco || u.semana)) {
-      html += claude(u.cinco, T('5 horas')) + claude(u.semana, T('Semana')) + (u.extras || []).map((x) => claude(x, x.nombre)).join('');
-    } else {
-      html += nota(T('Sin dato oficial todavía.'));
-    }
+    const claude = (v, nombre) => (v ? filaCuota(nombre, v.reiniciada ? 100 : Math.max(0, 100 - v.pct), v.reiniciada ? null : v.reinicio, 'claude') : '');
+    const filasClaude = u && (u.cinco || u.semana)
+      ? claude(u.cinco, T('5 horas')) + claude(u.semana, T('Semana')) + (u.extras || []).map((x) => claude(x, x.nombre)).join('')
+      : nota(T('Sin dato oficial todavía.'));
+    let html = bloque('Claude Code', 'claude', filasClaude, u && u.actualizado ? '<span class="pildora">' + esc(hace(u.actualizado)) + '</span>' : '');
     const ag = est.antigravity;
-    if (ag && ag.estado === 'ok') html += filasAntigravity(ag, 'Antigravity · ', false);
-    else if (ag && ag.estado) html += '<div class="sub"><b>Antigravity</b></div>' + nota(ag.estado === 'sin_agy' ? T('Sin el CLI agy.') : ag.estado === 'sin_sesion' ? T('Falta iniciar sesión en agy.') : '⚠ ' + esc(ag.error || ''));
+    if (ag && ag.estado === 'ok') html += bloqueAntigravity(ag, false);
+    else if (ag && ag.estado) html += bloque('Antigravity', 'neutro', nota(ag.estado === 'sin_agy' ? T('Sin el CLI agy.') : ag.estado === 'sin_sesion' ? T('Falta iniciar sesión en agy.') : '⚠ ' + esc(ag.error || '')));
     if (ag) html += '<button class="boton-chico" data-msg="consultarAntigravity"' + (ag.consultando ? ' disabled' : '') + '>' + (ag.consultando ? T('Consultando…') : '↻ ' + T('Actualizar')) + '</button>';
     return html;
   }
