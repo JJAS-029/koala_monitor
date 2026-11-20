@@ -150,6 +150,38 @@ function htmlVista(webview, extensionUri) {
   .repo b { font-weight: 600; }
   #btn-configurar { display: none; margin-top: 6px; font: inherit; border: none; border-radius: 3px; padding: 4px 8px;
                     cursor: pointer; color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+  /* ---------- Toques de Material 3 Expressive (ideas del monitor de celular), con los colores del tema ----------
+     Barras onduladas con su indicador de fin, cifras en recuadros de color suave, botones y etiquetas en píldora
+     y un pequeño rebote al presionar. Los colores salen de VS Code, así que siguen al tema claro, oscuro o de contraste. */
+  body { --onda: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 8'%3E%3Cpath d='M0 4 Q4 0.6 8 4 T16 4' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E");
+         --resorte: cubic-bezier(.34, 1.56, .64, 1); }
+  .barra, .medidor { position: relative; overflow: visible; background: none; height: 10px; }
+  .medidor { height: 8px; }
+  .barra::before, .medidor::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 3px; margin-top: -1.5px;
+    border-radius: 2px; background: var(--vscode-editorWidget-border, #8884); }
+  .barra::after, .medidor::after { content: ''; position: absolute; right: 0; top: 50%; width: 4px; height: 4px; margin-top: -2px;
+    border-radius: 50%; background: var(--vscode-foreground); opacity: .4; }
+  .barra > i, .medidor > i { position: relative; z-index: 1; height: 100%;
+    -webkit-mask: var(--onda) repeat-x left center / 12px 100%; mask: var(--onda) repeat-x left center / 12px 100%; }
+  .barra > i { animation: onda 1.8s linear infinite; }
+  @keyframes onda { to { -webkit-mask-position: 12px center; mask-position: 12px center; } }
+  @media (prefers-reduced-motion: reduce) { .barra > i { animation: none; } }
+  .cifra { padding: 6px 8px; border-radius: 14px; background: color-mix(in srgb, var(--vscode-charts-blue, #3794ff) 15%, transparent); }
+  .cifra:nth-child(4n+2) { background: color-mix(in srgb, var(--vscode-charts-purple, #b180d7) 15%, transparent); }
+  .cifra:nth-child(4n+3) { background: color-mix(in srgb, var(--vscode-charts-green, #89d185) 15%, transparent); }
+  .cifra:nth-child(4n+4) { background: color-mix(in srgb, var(--vscode-charts-orange, #d18616) 15%, transparent); }
+  .cifra b { font-size: 16px; font-weight: 700; }
+  .pildora { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 10px;
+             background: color-mix(in srgb, var(--vscode-foreground) 10%, transparent); }
+  .carrusel { border-radius: 16px; }
+  .renglon + .sub, .nota + .sub { margin-top: 8px; } /* aire antes de cada grupo (Cuotas de IA, Antigravity) */
+  .alerta { border-radius: 10px; }
+  .car-puntos i { transition: width .25s var(--resorte); }
+  .car-puntos i.sel { width: 14px; }
+  .boton-chico, .botones button, .pomo-botones button, #btn-configurar, .boton-agua, .alarma-form button {
+    border-radius: 999px; transition: transform .25s var(--resorte), background-color .2s; }
+  .boton-chico:active, .botones button:active, .pomo-botones button:active, #btn-configurar:active, .boton-agua:active { transform: scale(.94); }
+  @media (prefers-reduced-motion: reduce) { .boton-chico, .botones button, .pomo-botones button, #btn-configurar, .boton-agua { transition: none; } }
 </style>
 </head>
 <body>

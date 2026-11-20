@@ -1,5 +1,11 @@
 # Registro de cambios
 
+## 1.11.0
+- **Toques de Material 3 Expressive** (idea del monitor de celular), con los colores del tema de VS Code: barras
+  onduladas con indicador de fin (las de ánimo, energía, agua y pomodoro se mueven; con «reducir movimiento» se quedan
+  quietas), cifras en recuadros de color suave, botones y etiquetas en píldora, tarjetas más redondeadas y un pequeño
+  rebote al presionar.
+
 ## 1.10.0
 - **Mapa de calor de Claude y Gemini**: la tarjeta *Uso de IA por hora (7 días)* suma también los tokens de las
   conversaciones de Antigravity. Claude (Claude Code y los modelos Claude dentro de Antigravity) va en azul y Gemini en

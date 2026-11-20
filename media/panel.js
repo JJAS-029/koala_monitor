@@ -305,7 +305,7 @@
     }
     if (ag.estado === 'sin_sesion') return nota(T('Abre una terminal, ejecuta <code>agy</code> e inicia sesión con tu cuenta de Google; luego toca ↻.')) + boton;
     if (ag.estado !== 'ok') return nota('⚠ ' + esc(ag.error || '')) + boton;
-    return filasAntigravity(ag, '', true) + nota((ag.error ? '⚠ ' + esc(ag.error) + ' · ' : '') + T('Dato de agy /usage, {0}.', hace(ag.actualizado))) +
+    return filasAntigravity(ag, '', true) + nota((ag.error ? '⚠ ' + esc(ag.error) + ' ' : '') + '<span class="pildora">' + T('Dato de agy /usage, {0}.', hace(ag.actualizado)) + '</span>') +
       boton + botonHooksAgy(ag);
   }
   // Un renglón por límite: cuánto queda (la barra), con color por lo que ya se usó, y cuándo se renueva.
@@ -347,8 +347,8 @@
   function tarjetaFuente(u) {
     const api = u.api || {};
     let html;
-    if (u.fuente === 'anthropic') html = '<div class="nota">✓ ' + T('Dato real de api.anthropic.com, {0}.', hace(u.actualizado)) + '</div>';
-    else if (u.fuente === 'statusline') html = '<div class="nota">' + T('Dato de la status line de Claude Code, {0}.', hace(u.actualizado)) + '</div>';
+    if (u.fuente === 'anthropic') html = '<div class="nota"><span class="pildora">✓ ' + T('Dato real de api.anthropic.com, {0}.', hace(u.actualizado)) + '</span></div>';
+    else if (u.fuente === 'statusline') html = '<div class="nota"><span class="pildora">' + T('Dato de la status line de Claude Code, {0}.', hace(u.actualizado)) + '</span></div>';
     else html = '<div class="nota">' + T('Sin dato oficial todavía.') + '</div>';
     (u.extras || []).forEach((x) => {
       html += renglon(x.nombre, pct(x.pct), x.pct, nivel(x.pct, 75, 90), x.reinicio ? T('Se reinicia {0}', hora(x.reinicio)) : '');
