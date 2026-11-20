@@ -66,6 +66,11 @@
     el.innerHTML = html;
     el.querySelectorAll('[data-w]').forEach((i) => { i.style.width = i.getAttribute('data-w') + '%'; });
     el.querySelectorAll('[data-o]').forEach((i) => { i.style.opacity = i.getAttribute('data-o'); });
+    // Celdas del mapa de calor con Claude y Gemini en la misma hora: dos franjas, arriba Claude y abajo Gemini.
+    el.querySelectorAll('[data-mix]').forEach((i) => {
+      const g = i.getAttribute('data-mix');
+      i.style.background = 'linear-gradient(to bottom, var(--c-claude) 0 ' + (100 - g) + '%, var(--c-gemini) ' + (100 - g) + '% 100%)';
+    });
   }
 
   // ---------- Carruseles ----------
@@ -77,7 +82,7 @@
       ['cache', T('Eficiencia de caché (hoy)')]]],
     [T('Hoy'), [['resumen', T('Resumen del día')], ['proyectos', T('Por proyecto')], ['modelos', T('Por modelo')],
       ['herramientas', T('Herramientas de Claude')], ['git', 'Git'], ['problemas', T('Problemas del proyecto')],
-      ['calor', T('Uso de Claude por hora (7 días)')], ['logros', T('Logros')]]],
+      ['calor', T('Uso de IA por hora (7 días)')], ['logros', T('Logros')]]],
     [T('Sistema'), [['servidor', T('Servidor')], ['clima', T('Clima')], ['servicios', T('Servicios')], ['sincronizacion', T('Sincronización')]]],
   ];
   const TARJETAS = [].concat(...GRUPOS.map((g) => g[1]));
@@ -466,21 +471,38 @@
       cifra(String(d.archivos || 0), T('archivos')) + '</div>' +
       '<button class="boton-chico" data-cmd="workbench.actions.view.problems">' + T('Ver problemas') + '</button>');
 
-    // mapa de calor semanal
-    const mapa = h.mapa || [];
-    let max = 0;
-    for (const fila of mapa) for (const v of fila) max = Math.max(max, v);
+    // Mapa de calor semanal: Claude (Claude Code y los modelos Claude de Antigravity) en azul y Gemini (los demás
+    // modelos de Antigravity) en naranja; la intensidad es el total de tokens de esa hora.
+    const mapa = h.mapa || [], ag = h.mapaAgy || {};
+    const celda = (m, i, hh) => (m && m[i] && m[i][hh]) || 0;
+    const deClaude = (i, hh) => celda(mapa, i, hh) + celda(ag.claude, i, hh);
+    const deGemini = (i, hh) => celda(ag.gemini, i, hh) + celda(ag.otro, i, hh);
+    let max = 0, hayGemini = false;
+    for (let i = 0; i < 7; i++) {
+      for (let hh = 0; hh < 24; hh++) {
+        max = Math.max(max, deClaude(i, hh) + deGemini(i, hh));
+        hayGemini = hayGemini || deGemini(i, hh) > 0;
+      }
+    }
     let calor = '<div class="calor"><span></span>';
     for (let hh = 0; hh < 24; hh++) calor += '<span class="h">' + (hh % 6 === 0 ? hh : '') + '</span>';
-    mapa.forEach((fila, i) => {
-      calor += '<span>' + esc((h.dias || [])[i] || '') + '</span>';
-      fila.forEach((v, hh) => {
+    for (let i = 0; i < 7; i++) {
+      const dia = (h.dias || [])[i] || '';
+      calor += '<span>' + esc(dia) + '</span>';
+      for (let hh = 0; hh < 24; hh++) {
+        const c = deClaude(i, hh), g = deGemini(i, hh), v = c + g;
         const o = v && max ? (0.25 + 0.75 * Math.sqrt(v / max)).toFixed(2) : null;
-        calor += '<span class="c' + (o ? '' : ' c0') + '"' + (o ? ' data-o="' + o + '"' : '') +
-          ' title="' + esc((h.dias || [])[i] + ' ' + hh + ':00 · ' + tokens(v) + ' tokens') + '"></span>';
-      });
-    });
+        const clase = !o ? ' c0' : c && g ? '' : g ? ' g' : '';
+        const mezcla = o && c && g ? ' data-mix="' + Math.max(15, Math.min(85, Math.round((100 * g) / v))) + '"' : '';
+        const detalle = [c ? 'Claude ' + tokens(c) : '', g ? 'Gemini ' + tokens(g) : ''].filter(Boolean).join(' · ') || '0';
+        calor += '<span class="c' + clase + '"' + (o ? ' data-o="' + o + '"' : '') + mezcla +
+          ' title="' + esc(dia + ' ' + hh + ':00 · ' + detalle + ' tokens') + '"></span>';
+      }
+    }
     calor += '</div>';
+    if (hayGemini) {
+      calor += '<div class="leyenda-calor"><span class="m"></span>Claude<span class="m g"></span>Gemini<span class="m mix"></span>' + esc(T('las dos')) + '</div>';
+    }
     pintar('c-calor', calor);
 
     // vitrina de logros

@@ -484,5 +484,7 @@
  "Conecta el koala con el agente de Antigravity para que se siente a trabajar con él.": "Connect the koala with the Antigravity agent so it sits down to work with it.",
  "Conectar con Antigravity": "Connect with Antigravity",
  "Sin el CLI agy.": "No agy CLI.",
- "Falta iniciar sesión en agy.": "You need to sign in to agy."
+ "Falta iniciar sesión en agy.": "You need to sign in to agy.",
+ "Uso de IA por hora (7 días)": "AI usage by hour (7 days)",
+ "las dos": "both"
 }

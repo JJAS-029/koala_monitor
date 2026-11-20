@@ -20,6 +20,8 @@ const { crearCompartido, crearLider } = require('./compartido');
 const { crearNube } = require('./nube');
 const antigravity = require('./antigravity');
 const { leerMusica } = require('./musica');
+// Tokens por hora en las conversaciones de Antigravity (para el mapa de calor, junto a los de Claude Code).
+const usoAgy = antigravity.crearUsoAntigravity();
 const {
   crearConsumo, inicioVentana, ventanaVigente, formatoTokens, duracionTexto, HORA, CINCO_HORAS, SIETE_DIAS,
 } = require('./consumo');
@@ -621,7 +623,7 @@ function enviarEstado() {
     umbral: config().get('avisarEnPorcentaje', 90),
     energiaLigada: energiaDeSesion() !== null,
     pomodoro: pomodoro.estado(),
-    hoy: consumo.resumenHoy(),
+    hoy: Object.assign(consumo.resumenHoy(), { mapaAgy: usoAgy.mapa(new Date().setHours(0, 0, 0, 0)) }),
     activoHoy: datosActivo(),
     sistema, servicios, git: gitInfo, diag,
     alertas: calcularAlertas(uso),
@@ -1166,7 +1168,9 @@ function activate(ctx) {
   ctx.subscriptions.push({ dispose() { clearInterval(relojAlarmas); } });
   // Commits y pushes: el koala festeja (y se alegra: más ánimo).
   monitor.vigilarGit(alEventoGit).then((d) => ctx.subscriptions.push(d), () => {});
-  const relojUso = setInterval(consumo.escanearTranscripciones, 60 * 1000);
+  const escanearUso = () => { consumo.escanearTranscripciones(); try { usoAgy.escanear(); } catch (e) { /* sin Antigravity */ } };
+  setTimeout(escanearUso, 3000);
+  const relojUso = setInterval(escanearUso, 60 * 1000);
   ctx.subscriptions.push({
     dispose() {
       clearInterval(reloj);

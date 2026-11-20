@@ -402,3 +402,24 @@ test('música: lee lo que suena y lo que está en pausa', () => {
   assert.equal(musica.leerSalida(''), null);
   assert.equal(musica.leerSalida('{"title":""}'), null);
 });
+
+test('antigravity: tokens por hora y por familia desde las conversaciones', () => {
+  const gemini = carpetaTemporal();
+  const dir = path.join(gemini, 'antigravity', 'brain', 'conv1', '.system_generated', 'logs', 'chunks', 'transcript');
+  fs.mkdirSync(dir, { recursive: true });
+  const hoy = new Date(); hoy.setHours(10, 30, 0, 0);
+  const linea = (paso, modelo, entrada, salida) => JSON.stringify({ step_index: paso, type: 'PLANNER_RESPONSE', created_at: hoy.toISOString(), model: modelo, input_tokens: String(entrada), output_tokens: String(salida), content: 'no se lee' });
+  fs.writeFileSync(path.join(dir, '00000000.jsonl'), [
+    JSON.stringify({ step_index: 0, type: 'USER_INPUT', created_at: hoy.toISOString(), content: 'hola' }),
+    linea(1, 'gemini-4-neon-high', 1000, 200),
+    linea(2, 'claude-opus-5-5-medium', 500, 50),
+  ].join('\n'));
+  fs.writeFileSync(path.join(dir, '00000001.jsonl'), linea(1, 'gemini-4-neon-high', 1000, 200)); // repetida en otro trozo
+  const uso = antigravity.crearUsoAntigravity({ dirGemini: gemini });
+  uso.escanear();
+  const m = uso.mapa(new Date().setHours(0, 0, 0, 0));
+  assert.equal(m.gemini[6][10], 1200);
+  assert.equal(m.claude[6][10], 550);
+  assert.equal(m.gemini.flat().reduce((a, b) => a + b, 0), 1200); // la repetida no cuenta dos veces
+  assert.equal(antigravity.familia('gpt-oss-120b-medium'), 'otro');
+});

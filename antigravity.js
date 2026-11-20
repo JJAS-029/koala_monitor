@@ -81,4 +81,78 @@ function consultar({ bin = buscarAgy(), carpeta = path.join(os.tmpdir(), 'koala-
   });
 }
 
-module.exports = { buscarAgy, leerUso, consultar };
+// ---------- Uso local: tokens por respuesta en las conversaciones de Antigravity ----------
+// Cada respuesta del modelo (type PLANNER_RESPONSE) en ~/.gemini/<producto>/brain/<conversación>/.system_generated/
+// logs/chunks/transcript/*.jsonl trae model, input_tokens, output_tokens y created_at. Solo se leen esos números.
+const PRODUCTOS = ['antigravity', 'antigravity-cli', 'antigravity-ide'];
+const SIETE_DIAS_MS = 7 * 86400000;
+
+// gemini-4-neon-high → 'gemini'; claude-opus-5-5-medium → 'claude'; lo demás (p. ej. gpt-oss) → 'otro'.
+const familia = (modelo) => (/^gemini/i.test(modelo) ? 'gemini' : /^claude/i.test(modelo) ? 'claude' : 'otro');
+
+function crearUsoAntigravity({ dirGemini = path.join(os.homedir(), '.gemini') } = {}) {
+  const archivos = new Map(); // ruta → { mtime, size, respuestas: [{ id, t, tok, modelo }] }
+
+  function leerArchivo(ruta, conversacion) {
+    const respuestas = [];
+    let texto = '';
+    try { texto = fs.readFileSync(ruta, 'utf8'); } catch (e) { return respuestas; }
+    for (const linea of texto.split('\n')) {
+      if (!linea.includes('PLANNER_RESPONSE')) continue;
+      let d;
+      try { d = JSON.parse(linea); } catch (e) { continue; }
+      const t = Date.parse(d.created_at);
+      if (d.type !== 'PLANNER_RESPONSE' || !Number.isFinite(t)) continue;
+      const tok = (Number(d.input_tokens) || 0) + (Number(d.output_tokens) || 0);
+      if (tok) respuestas.push({ id: conversacion + ':' + d.step_index, t, tok, modelo: String(d.model || '') });
+    }
+    return respuestas;
+  }
+
+  // Relee solo los archivos que cambiaron en los últimos 7 días.
+  function escanear() {
+    const limite = Date.now() - SIETE_DIAS_MS;
+    const vistos = new Set();
+    for (const producto of PRODUCTOS) {
+      const brain = path.join(dirGemini, producto, 'brain');
+      let conversaciones = [];
+      try { conversaciones = fs.readdirSync(brain); } catch (e) { continue; }
+      for (const c of conversaciones) {
+        const dir = path.join(brain, c, '.system_generated', 'logs', 'chunks', 'transcript');
+        let nombres = [];
+        try { nombres = fs.readdirSync(dir).filter((n) => n.endsWith('.jsonl')); } catch (e) { continue; }
+        for (const n of nombres) {
+          const ruta = path.join(dir, n);
+          let st;
+          try { st = fs.statSync(ruta); } catch (e) { continue; }
+          if (st.mtimeMs < limite) continue;
+          vistos.add(ruta);
+          const previo = archivos.get(ruta);
+          if (previo && previo.mtime === st.mtimeMs && previo.size === st.size) continue;
+          archivos.set(ruta, { mtime: st.mtimeMs, size: st.size, respuestas: leerArchivo(ruta, producto + '/' + c) });
+        }
+      }
+    }
+    for (const ruta of [...archivos.keys()]) if (!vistos.has(ruta)) archivos.delete(ruta);
+  }
+
+  // Mapa día × hora (fila 6 = hoy) con los tokens de cada familia de modelos.
+  function mapa(inicioHoy) {
+    const vacio = () => Array.from({ length: 7 }, () => new Array(24).fill(0));
+    const m = { gemini: vacio(), claude: vacio(), otro: vacio() };
+    const vistas = new Set(); // los trozos de una conversación pueden repetir respuestas
+    for (const a of archivos.values()) {
+      for (const r of a.respuestas) {
+        if (vistas.has(r.id)) continue;
+        vistas.add(r.id);
+        const fila = 6 - (r.t >= inicioHoy ? 0 : Math.floor((inicioHoy - r.t) / 86400000) + 1);
+        if (fila >= 0 && fila < 7) m[familia(r.modelo)][fila][new Date(r.t).getHours()] += r.tok;
+      }
+    }
+    return m;
+  }
+
+  return { escanear, mapa };
+}
+
+module.exports = { buscarAgy, leerUso, consultar, crearUsoAntigravity, familia };

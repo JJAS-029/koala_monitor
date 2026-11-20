@@ -128,7 +128,16 @@ function htmlVista(webview, extensionUri) {
   .ritmo.alcanza { color: var(--vscode-charts-red, #e0524d); }
   .ritmo.holgado { color: var(--vscode-charts-green, #5bc46a); }
   .calor { display: grid; grid-template-columns: 26px repeat(24, 1fr); gap: 1px; font-size: 10px; align-items: center; }
-  .calor .c { height: 9px; border-radius: 1px; background: var(--vscode-charts-blue, #3794ff); }
+  /* Claude y Gemini: azul y naranja (validados para daltonismo; tonos propios en tema claro y oscuro). */
+  body { --c-claude: #2a78d6; --c-gemini: #eb6834; }
+  body.vscode-dark, body.vscode-high-contrast { --c-claude: #3987e5; --c-gemini: #d95926; }
+  .calor .c { height: 9px; border-radius: 1px; background: var(--c-claude); }
+  .calor .c.g { background: var(--c-gemini); }
+  .leyenda-calor { font-size: 10px; opacity: .8; margin-top: 4px; display: flex; align-items: center; flex-wrap: wrap; }
+  .leyenda-calor .m { display: inline-block; width: 9px; height: 9px; border-radius: 1px; margin: 0 3px 0 10px; background: var(--c-claude); }
+  .leyenda-calor .m:first-child { margin-left: 0; }
+  .leyenda-calor .m.g { background: var(--c-gemini); }
+  .leyenda-calor .m.mix { background: linear-gradient(to bottom, var(--c-claude) 50%, var(--c-gemini) 50%); }
   .calor .c0 { background: var(--vscode-editorWidget-border, #8884); opacity: .35; }
   .calor .h { opacity: .6; text-align: center; }
   .servicio { display: grid; grid-template-columns: 10px 1fr auto 16px; gap: 6px; align-items: center; font-size: 11px; margin: 4px 0; }

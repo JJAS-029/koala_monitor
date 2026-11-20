@@ -1,5 +1,11 @@
 # Registro de cambios
 
+## 1.10.0
+- **Mapa de calor de Claude y Gemini**: la tarjeta *Uso de IA por hora (7 días)* suma también los tokens de las
+  conversaciones de Antigravity. Claude (Claude Code y los modelos Claude dentro de Antigravity) va en azul y Gemini en
+  naranja; en las horas en que usaste los dos, la celda se parte en dos franjas según cuánto fue de cada uno. Al
+  pasar el mouse dice cuántos tokens de cada uno. Colores validados para daltonismo, con tonos para tema claro y oscuro.
+
 ## 1.9.0
 Ideas traídas del monitor de celular (monitor_cel):
 - **Claude y Antigravity por separado**: el koala lee `~/.claude/koala-estado-antigravity.json` (hook de agy) aparte
