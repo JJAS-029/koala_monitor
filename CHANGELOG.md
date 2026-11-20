@@ -1,5 +1,11 @@
 # Registro de cambios
 
+## Documentación (nov. 2026)
+- Capturas del README actualizadas: animaciones (ahora 9, con el eucalipto, la ofrenda, la piñata y los audífonos) y
+  tarjetas del panel (Mascota, Cuotas de IA, Uso por hora y Sistema), con datos de demostración.
+  Nuevo `pruebas/capturas-panel.js` para rehacerlas.
+- Invitación a nuestros podcasts: CiencIA y CiencIAficción.
+
 ## 1.12.0
 - **Cuotas de todos los modelos en una tarjeta**, al estilo del monitor de celular: un bloque por servicio (Claude Code
   y Antigravity) y un renglón por límite con barra ondulada a lo ancho, cuánto queda y cuándo se renueva. El color

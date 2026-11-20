@@ -1,5 +1,5 @@
 'use strict';
-// Imagen de animaciones para el readme: docs/capturas/animaciones.png (3 × 2 cuadros).
+// Imagen de animaciones para el readme: docs/capturas/animaciones.png (3 × 3 cuadros).
 // Uso: node pruebas/capturas-readme.js
 const path = require('path');
 const fs = require('fs');
@@ -20,7 +20,17 @@ toma(1, (e) => { e.enviar(base()); e.avanzar(0.2); e.enviar(base({ trabajando: t
 toma(2, (e) => { e.enviar(base({ pomodoro: { fase: 'enfoque', total: 1500000, restante: 900000, pausado: false, hoy: 2, enfoque: 25 } })); e.avanzar(5.5); });
 toma(3, (e) => { e.enviar(base()); e.avanzar(0.3); e.enviar({ tipo: 'accion', accion: 'festejarCommit', datos: { repo: 'app', mensaje: 'feat' } }); e.avanzar(2.4); });
 toma(4, (e) => { e.enviar(base()); e.avanzar(0.3); e.enviar({ tipo: 'accion', accion: 'comandoFallo', datos: { comando: 'pytest', codigo: 1 } }); e.avanzar(1.3); });
-toma(5, (e) => { e.enviar(base({ temporada: 'muertos' })); e.avanzar(1); });
+// Se trepa a dormir al eucalipto tras mucho trabajo seguido.
+toma(7, (e) => { e.enviar(base({ trabajando: true, minutosTreparse: 120, rutina: { continuoMin: 130 } })); e.avanzar(10); });
+// Día de Muertos: visita la ofrenda.
+toma(5, (e) => { e.enviar(base({ temporada: 'muertos' })); e.avanzar(0.3); e.koala.probar('visitarOfrenda'); e.avanzar(2.6); });
+// Posadas: rompe la piñata junto al árbol de Navidad.
+toma(8, (e) => {
+  const posada = new Date(new Date().getFullYear(), 11, 18, 12, 0).getTime();
+  e.enviar(base({ temporada: 'navidad', horaPrueba: posada })); e.avanzar(0.3); e.koala.probar('romperPinata'); e.avanzar(3.25);
+});
+// Con música: audífonos y notas.
+toma(9, (e) => { e.enviar(base({ musica: { titulo: 'Cielito lindo', artista: 'Mariachi', sonando: true } })); e.avanzar(0.3); e.koala.probar('escucharMusica'); e.avanzar(1.1); });
 toma(6, (e) => {
   e.enviar(base({ temporada: 'marmota' })); e.avanzar(0.2);
   Object.assign(e.koala.k, { cargado: true, x: 205, pose: 'frente', def: { sx: 1, sy: 1 }, mirar: 1, ojos: 'abiertos', t: 2.4 }); // junto a la madriguera
@@ -28,7 +38,8 @@ toma(6, (e) => {
 });
 
 const col = 3, sep = 6, w = cuadros[0].w, h = cuadros[0].h;
-const W = col * w + (col + 1) * sep, H = 2 * h + 3 * sep;
+const filas = Math.ceil(cuadros.length / col);
+const W = col * w + (col + 1) * sep, H = filas * h + (filas + 1) * sep;
 const out = Buffer.alloc(W * H * 4);
 for (let i = 0; i < W * H; i++) { out[i * 4] = 0x2b; out[i * 4 + 1] = 0x45; out[i * 4 + 2] = 0x5c; out[i * 4 + 3] = 255; }
 cuadros.forEach((c, n) => {

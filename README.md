@@ -1,17 +1,17 @@
 # Koala científico 🐨🧪
 
 Mascota de laboratorio en pixel art para el Explorador de VS Code. Trabaja contigo (editor,
-terminal y Claude Code), festeja tus commits, te avisa cuando Claude te necesita y funciona como
-**mini monitor** de tu consumo de Claude Code: límites de **sesión (5 h)** y **semana**, ritmo,
-costo equivalente, pomodoro, git y servidor.
+terminal, Claude Code y el agente de Antigravity), festeja tus commits, te avisa cuando Claude te necesita y
+funciona como **mini monitor** de tu consumo de IA: límites de **sesión (5 h)** y **semana** de Claude Code y de
+Antigravity (Gemini), uso por hora, ritmo, costo equivalente, pomodoro, git y servidor.
 
 ![Animaciones del koala](docs/capturas/animaciones.png)
 
-| Mascota | Consumo | Hoy | Sistema |
+| Mascota | Cuotas de IA | Uso por hora | Sistema |
 |---|---|---|---|
-| ![Mascota](docs/capturas/panel-mascota.png) | ![Consumo](docs/capturas/panel-consumo.png) | ![Hoy](docs/capturas/panel-hoy.png) | ![Sistema](docs/capturas/panel-sistema.png) |
+| ![Mascota](docs/capturas/panel-mascota.png) | ![Cuotas de IA de Claude Code y Antigravity](docs/capturas/panel-cuotas.png) | ![Uso de IA por hora: Claude en azul y Gemini en naranja](docs/capturas/panel-calor.png) | ![Servidor y servicios](docs/capturas/panel-sistema.png) |
 
-*Capturas con datos de demostración.*
+*Capturas con datos de demostración (`node pruebas/capturas-panel.js` y `node pruebas/capturas-readme.js`).*
 
 ## Empezar
 1. Instala la extensión y abre el Explorador → **Koala científico**.
@@ -229,6 +229,12 @@ macOS pide permiso). Con **Settings Sync** de VS Code, el ánimo, la saciedad y 
 te siguen entre computadoras; el resto (pomodoros, tiempo activo, consumo) es de cada máquina.
 Si usas Claude Code por SSH, instala la extensión en el remoto (corre donde está `~/.claude`).
 
+## 🎙️ Escucha nuestros podcasts
+Si te gustó el koala, pásate a escuchar nuestros podcasts sobre ciencia, inteligencia artificial y ciencia ficción:
+
+- **[CiencIA](https://creators.spotify.com/pod/profile/jjas/)**, en Spotify for Creators
+- **[CiencIAficción](https://creators.spotify.com/pod/profile/jjas1/)**, en Spotify for Creators
+
 ## Licencia
 MIT. Código en https://github.com/JJAS-029/koala_monitor.
 
@@ -236,6 +242,8 @@ MIT. Código en https://github.com/JJAS-029/koala_monitor.
 - Pruebas de la lógica: `npm test` (o `node --test pruebas/*.test.js`): alarmas, costos, consumo, rachas,
   logros, pomodoro, respuesta de Anthropic.
 - Pruebas de las animaciones sin navegador: `node pruebas/simular.js [carpeta]` (capturas PNG por acción).
+- Capturas del README: `node pruebas/capturas-readme.js` (animaciones) y `node pruebas/capturas-panel.js` (tarjetas
+  del panel con datos de demostración; necesita Edge o Chrome, o `EDGE=<ruta>`).
 - Ensayo de activación: `node pruebas/ensayo-activacion.js` (dos editores simulados con un contexto como el real;
   con `monitor`, que el monitor se configure solo en un equipo nuevo). Sin `node`, sirve el de VS Code:
   `ELECTRON_RUN_AS_NODE=1 "<ruta a Code.exe>" pruebas/ensayo-activacion.js`.
