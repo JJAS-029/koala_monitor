@@ -102,6 +102,14 @@ const terminar = (...editores) => {
     try { texto = fs.readFileSync(path.join(HOME, '.claude', 'settings.json'), 'utf8'); } catch (e) { /* */ }
     ok(texto.includes('koala-hook.py') && texto.includes('koala-statusline.py'), 'el monitor se configuró solo, sin preguntar');
     ok(fs.existsSync(path.join(HOME, '.claude', 'koala', 'koala-hook.py')), 'copió los scripts');
+    // Hooks de Antigravity: se agregan a ~/.gemini/config/hooks.json sin borrar los que ya había.
+    const rutaHooks = path.join(HOME, '.gemini', 'config', 'hooks.json');
+    fs.mkdirSync(path.dirname(rutaHooks), { recursive: true });
+    fs.writeFileSync(rutaHooks, JSON.stringify({ 'mi-linter': { PostToolUse: [] } }));
+    await s.comandos['koalaCientifico.configurarAntigravity']();
+    const hooks = JSON.parse(fs.readFileSync(rutaHooks, 'utf8'));
+    ok(hooks['mi-linter'] && hooks['koala-monitor'].PreInvocation[0].command.includes('koala-hook.py" trabajando --antigravity'), 'conecta los hooks de Antigravity y respeta los demás');
+    ok(fs.readdirSync(path.dirname(rutaHooks)).some((f) => f.includes('koala-respaldo')), 'con respaldo de hooks.json');
     return terminar(s);
   }
 
@@ -141,6 +149,20 @@ const terminar = (...editores) => {
   ok(agA && ['ok', 'sin_agy', 'sin_sesion', 'error'].includes(agA.estado), `la consulta de Antigravity llega al panel (${agA && agA.estado})`);
   await esperar(2500);
   ok(b.estado().antigravity && b.estado().antigravity.estado === agA.estado, 'y la otra ventana recibe el mismo dato');
+
+  // Claude y Antigravity por separado: el hook de agy escribe su propio archivo; la copia vieja que dejaba en el
+  // archivo de Claude (con fuente "antigravity") se ignora.
+  const escribir = (nombre, datos) => fs.writeFileSync(path.join(HOME, '.claude', nombre), JSON.stringify(datos));
+  escribir('koala-estado-antigravity.json', { estado: 'trabajando', ts: Date.now(), inicio: Date.now(), fuente: 'antigravity' });
+  escribir('koala-estado.json', { estado: 'trabajando', ts: Date.now(), inicio: Date.now(), fuente: 'antigravity' });
+  await esperar(2500);
+  ok(a.estado().antigravityActivo === true && a.estado().claude === false, 'Antigravity trabajando no se confunde con Claude');
+  escribir('koala-estado.json', { estado: 'trabajando', ts: Date.now(), inicio: Date.now() });
+  await esperar(2500);
+  ok(a.estado().antigravityActivo === true && a.estado().claude === true, 'y los dos a la vez');
+  escribir('koala-estado-antigravity.json', { estado: 'descanso', ts: Date.now(), inicio: Date.now() - 1000, duracion: 1000, fuente: 'antigravity' });
+  await esperar(2500);
+  ok(a.estado().antigravityActivo === false && a.estado().claude === true, 'Antigravity termina y Claude sigue');
 
   const doc = JSON.parse(fs.readFileSync(path.join(HOME, '.claude', 'koala', 'compartido.json'), 'utf8'));
   ok(!JSON.stringify(doc).includes('accessToken'), 'el archivo compartido no lleva tokens');

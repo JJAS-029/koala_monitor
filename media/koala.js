@@ -308,7 +308,9 @@
     cola.push(esperar(1, {
       libre: true,
       ini() {
-        k.texto = est.claude ? T('Claude está trabajando: el koala toma notas') : T('Trabajando contigo');
+        k.texto = est.claude && est.antigravityActivo ? T('Claude y Antigravity están trabajando: el koala toma notas')
+          : est.antigravityActivo ? T('Antigravity está trabajando: el koala toma notas')
+            : est.claude ? T('Claude está trabajando: el koala toma notas') : T('Trabajando contigo');
         const u = usoMaximo();
         const al = alertaMayor();
         k.sudor = u >= 75 || !!(al && al.nivel >= 2);
@@ -456,6 +458,7 @@
       [nervioso() ? 3 : 0, mirarLados],
       [lloviendo() ? 2 : 0, paraguas],
       [est.clima && est.clima.temp >= 30 ? 2 : 0, abanicarse],
+      [musicaSonando() ? 5 : 0, escucharMusica],
       [est.temporada === 'muertos' ? 2 : 0, visitarOfrenda],
       [est.temporada === 'navidad' ? 1.5 : 0, adornarArbol],
       [est.temporada === 'navidad' && enPosadas() ? 1.5 : 0, romperPinata],
@@ -794,6 +797,24 @@
     if (k.palo === 'golpe') { cel(5.4, -10.4, 6.5, 0.5, COL.tallo); return; }
     if (k.palo === 'arriba') { cel(4.8, -16, 0.5, 6.5, COL.tallo); return; }
     cel(5.6, -9.5, 0.5, 5.5, COL.tallo);
+  }
+
+  // ---------- Música: con audífonos, mueve la cabeza al ritmo ----------
+  const musicaSonando = () => !!(est.musica && est.musica.sonando);
+  function escucharMusica() {
+    const m = est.musica || {};
+    cola.push(esperar(azar(3, 5), {
+      libre: true,
+      ini() { posturaBase(); k.mirar = 0; k.texto = '🎧 ' + m.titulo + (m.artista ? ' — ' + m.artista : ''); },
+      act(p, dt, t) {
+        const golpe = Math.sin(t * Math.PI * 4); // dos cabeceos por segundo
+        k.balanceo = golpe * 0.12;
+        k.alt = Math.max(0, golpe) * 2;
+        k.ojos = Math.floor(t * 0.8) % 2 ? 'cerrados' : 'felices';
+        if (Math.random() < dt * 2.5) particulas.push({ tipo: 'nota', x: k.x + azar(-6, 6) * C, y: suelo - 12 * C, vx: azar(-12, 12), vy: -azar(14, 26), vida: 0, max: 1.2 });
+      },
+      fin() { k.balanceo = 0; k.alt = 0; k.ojos = null; },
+    }));
   }
 
   // ---------- Eucalipto: después de mucho trabajo seguido se trepa a dormir ----------
@@ -1454,7 +1475,7 @@
   function claudeListo(d) {
     sonar('listo');
     cola.push(
-      esperar(0.3, { ini() { posturaBase(); k.mirar = 0; k.ojos = 'felices'; k.texto = '📜 ' + T('¡Claude terminó! ({0})', duracionCorta(d.duracion)); } }),
+      esperar(0.3, { ini() { posturaBase(); k.mirar = 0; k.ojos = 'felices'; k.texto = '📜 ' + (d.quien === 'Antigravity' ? T('¡Antigravity terminó! ({0})', duracionCorta(d.duracion)) : T('¡Claude terminó! ({0})', duracionCorta(d.duracion))); } }),
       ...salto(14, 0.4, { ini() { ponerPose('estirado'); k.brazos = 'arriba-der'; k.sosteniendo = 'papel'; } }),
       esperar(2.2, {
         ini() { k.brazos = 'arriba-der'; k.sosteniendo = 'papel'; ponerPose('frente'); },
@@ -1839,6 +1860,7 @@
       cel(5.5, -11.6, 0.9, 0.6, COL.verde);
     }
     if (k.hollin > 0) hollin(-2.6 + m * 0.5, 1.6 + m * 0.5, -6.7);
+    audifonos(false);
     adornoOreja(-5.8, -10.8);
     sombrero(0, -10.2);
     medallas(-3.4, -3.4);
@@ -1853,6 +1875,20 @@
     if (est.clima && est.clima.temp != null && est.clima.temp <= 10) bufanda();
     if (k.sosteniendo === 'escoba') escoba(S.ox + (5 + (k.escobaX || 0) * 1.5) * C * S.sx, S.oy);
     if (k.sosteniendo === 'extintor') extintor(S.ox + 5.6 * C * S.sx, S.oy - 3.4 * C * S.sy);
+  }
+
+  // Audífonos cuando suena música en la computadora (sentado: tres cuartos, mirando a la derecha).
+  function audifonos(sentado) {
+    if (!musicaSonando()) return;
+    const diadema = '#2E2E2E', copa = COL.rojo, copaS = COL.pelotaS;
+    if (sentado) {
+      cel(-5.1, -10, 8.6, 0.6, diadema); cel(-5.1, -10, 0.6, 1.2, diadema); cel(2.9, -10, 0.6, 1.1, diadema);
+      cel(-6, -8.9, 2, 2.4, copaS); cel(2.3, -9, 2.2, 2.6, copa); cel(2.5, -8.7, 0.6, 2, copaS);
+      return;
+    }
+    cel(-5.2, -11.4, 10.4, 0.6, diadema); cel(-5.2, -11.4, 0.6, 2, diadema); cel(4.6, -11.4, 0.6, 2, diadema);
+    cel(-6.4, -9.6, 2.2, 2.6, copa); cel(-6.2, -9.3, 0.6, 2, copaS);
+    cel(4.2, -9.6, 2.2, 2.6, copa); cel(5.4, -9.3, 0.6, 2, copaS);
   }
 
   // Gorro según temporada u hora (Navidad > pijama de noche).
@@ -2055,6 +2091,7 @@
     S = cuerpo;
     if (k.sudor) cel(-3.2, -6.6, 0.6, 1, COL.sudor);
     if (k.hollin > 0) hollin(-0.8, 2.3, -5.7);
+    audifonos(true);
     adornoOreja(-6.4, -10.2);
     sombrero(1, -9.2);
     medallas(-1.6, -2.4);
@@ -2516,7 +2553,7 @@
     const m = e.data;
     if (!m) return;
     if (m.tipo === 'estado') {
-      const antes = { trabajando: est.trabajando, durmiendo: est.durmiendo, necesita: !!est.claudeNecesita, siesta: enSiesta(),
+      const antes = { trabajando: est.trabajando, durmiendo: est.durmiendo, necesita: !!est.claudeNecesita, siesta: enSiesta(), musica: musicaSonando(),
         fase: est.pomodoro ? est.pomodoro.fase + ':' + est.pomodoro.pausado : '' };
       est = Object.assign(est, m);
       pintarNecesidades();
@@ -2527,7 +2564,7 @@
       pomoRecibido = Date.now();
       pintarPomodoroDom();
       const fase = est.pomodoro ? est.pomodoro.fase + ':' + est.pomodoro.pausado : '';
-      if (antes.trabajando !== est.trabajando || antes.durmiendo !== est.durmiendo || antes.fase !== fase || antes.necesita !== !!est.claudeNecesita || antes.siesta !== enSiesta()) interrumpir();
+      if (antes.trabajando !== est.trabajando || antes.durmiendo !== est.durmiendo || antes.fase !== fase || antes.necesita !== !!est.claudeNecesita || antes.siesta !== enSiesta() || antes.musica !== musicaSonando()) interrumpir();
     } else if (m.tipo === 'accion') {
       if (m.datos) datosAccion[m.accion] = m.datos;
       pendientes.push(m.accion);
@@ -2566,6 +2603,6 @@
   window.__koala = {
     k, est: () => est, cola: () => cola,
     // fuerza una acción de ocio de temporada (las escenas no dependen del azar)
-    probar(nombre) { cola = []; paso = null; posturaBase(); ({ visitarOfrenda, adornarArbol, romperPinata })[nombre](); },
+    probar(nombre) { cola = []; paso = null; posturaBase(); ({ visitarOfrenda, adornarArbol, romperPinata, escucharMusica })[nombre](); },
   };
 })();

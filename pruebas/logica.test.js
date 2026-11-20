@@ -391,3 +391,14 @@ test('antigravity: sin datos estructurados usa el texto con tabuladores', () => 
   assert.deepEqual(antigravity.leerUso('').grupos, []);
   assert.deepEqual(antigravity.leerUso('Error: algo falló').grupos, []);
 });
+
+// ---------- Música (Windows) ----------
+const musica = require(path.join(raiz, 'musica.js'));
+test('música: lee lo que suena y lo que está en pausa', () => {
+  assert.deepEqual(musica.leerSalida('{"title":"Cielito lindo","artist":"Mariachi Vargas","album":"","status":"Playing","app":"Spotify.exe"}'),
+    { titulo: 'Cielito lindo', artista: 'Mariachi Vargas', app: 'Spotify', sonando: true });
+  assert.equal(musica.leerSalida('{"title":"Video","artist":"","status":"Paused","app":"MSEdge"}').sonando, false);
+  assert.equal(musica.leerSalida('null'), null);
+  assert.equal(musica.leerSalida(''), null);
+  assert.equal(musica.leerSalida('{"title":""}'), null);
+});

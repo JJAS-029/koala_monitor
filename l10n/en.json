@@ -474,5 +474,15 @@
  "5 horas": "5 hours",
  "{0} libre": "{0} left",
  "Se renueva {0}": "Renews {0}",
- "Dato de agy /usage, {0}.": "From agy /usage, {0}."
+ "Dato de agy /usage, {0}.": "From agy /usage, {0}.",
+ "Listo: el koala sabrá cuándo trabaja el agente de Antigravity (también en el monitor de celular).": "Done: the koala will know when the Antigravity agent is working (on the phone monitor too).",
+ "🐨📜 Antigravity terminó ({0}).": "🐨📜 Antigravity finished ({0}).",
+ "Claude y Antigravity están trabajando: el koala toma notas": "Claude and Antigravity are working: the koala takes notes",
+ "Antigravity está trabajando: el koala toma notas": "Antigravity is working: the koala takes notes",
+ "¡Antigravity terminó! ({0})": "Antigravity finished! ({0})",
+ "Cuotas de IA": "AI quotas",
+ "Conecta el koala con el agente de Antigravity para que se siente a trabajar con él.": "Connect the koala with the Antigravity agent so it sits down to work with it.",
+ "Conectar con Antigravity": "Connect with Antigravity",
+ "Sin el CLI agy.": "No agy CLI.",
+ "Falta iniciar sesión en agy.": "You need to sign in to agy."
 }

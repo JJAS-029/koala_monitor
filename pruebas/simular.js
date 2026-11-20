@@ -683,6 +683,26 @@ escena('36-navidad-arbol-y-pinata', 93, (e, tomar) => {
   verificar(!e.koala.k.venda && e.koala.k.sosteniendo !== 'palo', 'se quita la venda y suelta el palo');
 });
 
+escena('37-musica-y-antigravity', 94, (e, tomar) => {
+  const musica = { titulo: 'Cielito lindo', artista: 'Mariachi Vargas', app: 'Spotify', sonando: true };
+  e.enviar(estado({ musica }));
+  e.avanzar(0.5);
+  e.koala.probar('escucharMusica');
+  for (let i = 0; i < 4; i++) { e.avanzar(0.6); tomar(); }
+  verificar(/🎧 Cielito lindo — Mariachi Vargas/.test(e.elementos['estado'].textContent), 'con música se pone audífonos y dice la canción');
+  e.enviar(estado({ musica, trabajando: true, antigravityActivo: true }));
+  for (let i = 0; i < 6; i++) { e.avanzar(0.7); tomar(); }
+  e.avanzar(1.5); tomar();
+  verificar(/Antigravity está trabajando/.test(e.elementos['estado'].textContent), 'distingue cuando trabaja Antigravity');
+  e.enviar(estado({ trabajando: true, antigravityActivo: true, claude: true }));
+  e.avanzar(1.5);
+  verificar(/Claude y Antigravity/.test(e.elementos['estado'].textContent), 'y cuando trabajan los dos');
+  e.enviar({ tipo: 'accion', accion: 'claudeListo', datos: { duracion: 185000, quien: 'Antigravity' } });
+  let listo = false;
+  for (let i = 0; i < 8; i++) { e.avanzar(0.4); listo = listo || /Antigravity terminó/.test(e.elementos['estado'].textContent); }
+  verificar(listo, 'avisa que terminó Antigravity');
+});
+
 if (errores.length) {
   console.log(`\n${errores.length} verificación(es) fallaron`);
   process.exit(1);

@@ -1,5 +1,17 @@
 # Registro de cambios
 
+## 1.9.0
+Ideas traídas del monitor de celular (monitor_cel):
+- **Claude y Antigravity por separado**: el koala lee `~/.claude/koala-estado-antigravity.json` (hook de agy) aparte
+  del de Claude: «Antigravity está trabajando», «Claude y Antigravity están trabajando» y «¡Antigravity terminó!».
+  Ignora la copia que versiones viejas del hook de monitor_cel dejaban en el archivo de Claude.
+- **Conectar con el agente de Antigravity**: comando (y botón en la tarjeta) que agrega los hooks de agy a
+  `~/.gemini/config/hooks.json`, con respaldo y respetando los demás. Usa el mismo `koala-hook.py` (modo
+  `--antigravity`), así que no necesita node ni la carpeta de monitor_cel.
+- **Tarjeta «Cuotas de IA»**: Claude Code y Antigravity juntos, cuánto queda de cada límite y cuándo se renueva.
+- **Música** (Windows): si suena algo (Spotify, YouTube…), el koala se pone audífonos, mueve la cabeza y dice la
+  canción. Se lee con el control multimedia del sistema solo con el panel a la vista (`koalaCientifico.musica`).
+
 ## 1.8.0
 - **Cuotas de Antigravity**: tarjeta *Antigravity · Cuotas* (en Consumo) con el límite de 5 h y el semanal de cada
   grupo de modelos (Gemini, Claude y GPT, Argon), cuánto queda y cuándo se renueva. Sale del CLI oficial `agy`

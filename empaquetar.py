@@ -7,8 +7,8 @@ import zipfile
 from xml.sax.saxutils import escape
 
 RAIZ = os.path.dirname(os.path.abspath(__file__))
-ARCHIVOS = ["package.json", "extension.js", "monitor.js", "costos.js", "rutina.js", "alarmas.js", "vista.js", "consumo.js", "anthropic.js", "pomodoro.js", "configurar.js", "compartido.js", "nube.js", "antigravity.js", "idioma.js", "l10n/en.json", "package.nls.json", "package.nls.es.json", "README.md", "CHANGELOG.md", "LICENSE", "media/koala.js", "media/panel.js", "media/icono.png",
-            "scripts/koala-statusline.py", "scripts/koala-hook.py"]
+ARCHIVOS = ["package.json", "extension.js", "monitor.js", "costos.js", "rutina.js", "alarmas.js", "vista.js", "consumo.js", "anthropic.js", "pomodoro.js", "configurar.js", "compartido.js", "nube.js", "antigravity.js", "musica.js", "idioma.js", "l10n/en.json", "package.nls.json", "package.nls.es.json", "README.md", "CHANGELOG.md", "LICENSE", "media/koala.js", "media/panel.js", "media/icono.png",
+            "scripts/koala-statusline.py", "scripts/koala-hook.py", "scripts/media-info.ps1"]
 
 pkg = json.load(open(os.path.join(RAIZ, "package.json"), encoding="utf-8"))
 salida = os.path.join(RAIZ, f"{pkg['name']}-{pkg['version']}.vsix")
@@ -19,6 +19,7 @@ tipos = """<?xml version="1.0" encoding="utf-8"?>
   <Default Extension=".js" ContentType="application/javascript"/>
   <Default Extension=".md" ContentType="text/markdown"/>
   <Default Extension=".py" ContentType="text/x-python"/>
+  <Default Extension=".ps1" ContentType="text/plain"/>
   <Default Extension=".png" ContentType="image/png"/>
   <Default Extension=".txt" ContentType="text/plain"/>
   <Default Extension=".vsixmanifest" ContentType="text/xml"/>

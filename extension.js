@@ -19,12 +19,15 @@ const { crearConfigurador } = require('./configurar');
 const { crearCompartido, crearLider } = require('./compartido');
 const { crearNube } = require('./nube');
 const antigravity = require('./antigravity');
+const { leerMusica } = require('./musica');
 const {
   crearConsumo, inicioVentana, ventanaVigente, formatoTokens, duracionTexto, HORA, CINCO_HORAS, SIETE_DIAS,
 } = require('./consumo');
 
 const DIR_CLAUDE = path.join(os.homedir(), '.claude');
 const RUTA_ESTADO_CLAUDE = path.join(DIR_CLAUDE, 'koala-estado.json');
+// Lo escribe el hook de Antigravity (koala-hook.py --antigravity, o el de monitor_cel).
+const RUTA_ESTADO_AGY = path.join(DIR_CLAUDE, 'koala-estado-antigravity.json');
 const RUTA_USO = path.join(DIR_CLAUDE, 'koala-uso.json');
 const DIR_PROYECTOS = path.join(DIR_CLAUDE, 'projects');
 
@@ -54,6 +57,10 @@ let ultimoTick = Date.now();
 let ultimaActividad = 0;
 let editorTrabajando = false;
 let claudeTrabajando = false;
+let agyTrabajando = false; // el agente de Antigravity (agy)
+let ultimoTsAgy = 0;
+let temporizadorAgy = null;
+let musicaActual = null; // { titulo, artista, app, sonando }
 let manual = null; // null | 'trabajar' | 'descansar'
 let temporizadorClaude = null;
 
@@ -88,7 +95,8 @@ const config = () => vscode.workspace.getConfiguration('koalaCientifico');
 function trabajando() {
   if (manual === 'trabajar') return true;
   if (manual === 'descansar') return false;
-  return editorTrabajando || (claudeTrabajando && config().get('reaccionarAClaude', true));
+  return editorTrabajando || (claudeTrabajando && config().get('reaccionarAClaude', true)) ||
+    (agyTrabajando && config().get('reaccionarAAntigravity', true));
 }
 
 // ---------- Persistencia y desgaste ----------
@@ -174,6 +182,8 @@ function leerEstadoClaude() {
   } catch (e) {
     return;
   }
+  // Versiones viejas del hook de Antigravity copiaban su estado aquí: eso se lee de su propio archivo.
+  if (datos.fuente === 'antigravity') return;
   const nuevo = datos.ts && datos.ts !== ultimoTsClaude;
   const primeraLectura = ultimoTsClaude === 0;
   ultimoTsClaude = datos.ts || ultimoTsClaude;
@@ -193,7 +203,7 @@ function leerEstadoClaude() {
   const minimo = config().get('avisarTurnoLargoSegundos', 120) * 1000;
   if (datos.estado === 'descanso' && nuevo && !primeraLectura && minimo > 0 && datos.duracion >= minimo) {
     const dur = datos.duracion;
-    if (vista && vista.visible) vista.webview.postMessage({ tipo: 'accion', accion: 'claudeListo', datos: { duracion: dur } });
+    if (vista && vista.visible) vista.webview.postMessage({ tipo: 'accion', accion: 'claudeListo', datos: { duracion: dur, quien: 'Claude' } });
     if (!vscode.window.state.focused || config().get('avisarTurnoLargoSiempre', false)) {
       vscode.window.showInformationMessage(t('🐨📜 Claude terminó ({0}).', duracionTexto(dur)));
     }
@@ -278,8 +288,42 @@ function alTerminarComando(e) {
 }
 
 // Minutos sin actividad en el editor, la terminal ni Claude (para la siesta sobre la laptop).
+// El agente de Antigravity: trabaja (PreInvocation/PostToolUse) o terminó su turno (Stop).
+function leerEstadoAntigravity() {
+  let datos = null;
+  try { datos = JSON.parse(fs.readFileSync(RUTA_ESTADO_AGY, 'utf8')); } catch (e) { return; }
+  const nuevo = datos.ts && datos.ts !== ultimoTsAgy;
+  const primeraLectura = ultimoTsAgy === 0;
+  ultimoTsAgy = datos.ts || ultimoTsAgy;
+  const fresco = Date.now() - (datos.ts || 0) < TURNO_MAXIMO_MS;
+  const minimo = config().get('avisarTurnoLargoSegundos', 120) * 1000;
+  if (datos.estado === 'descanso' && nuevo && !primeraLectura && minimo > 0 && datos.duracion >= minimo) {
+    if (vista && vista.visible) vista.webview.postMessage({ tipo: 'accion', accion: 'claudeListo', datos: { duracion: datos.duracion, quien: 'Antigravity' } });
+    if (!vscode.window.state.focused || config().get('avisarTurnoLargoSiempre', false)) {
+      vscode.window.showInformationMessage(t('🐨📜 Antigravity terminó ({0}).', duracionTexto(datos.duracion)));
+    }
+  }
+  clearTimeout(temporizadorAgy);
+  const vigente = datos.estado === 'trabajando' && fresco;
+  if (vigente) temporizadorAgy = setTimeout(() => { agyTrabajando = false; enviarEstado(); }, TURNO_MAXIMO_MS - (Date.now() - datos.ts));
+  if (vigente !== agyTrabajando) { agyTrabajando = vigente; enviarEstado(); }
+}
+
+// Música: solo con el panel a la vista (es lo único que la muestra).
+let leyendoMusica = false;
+async function medirMusica() {
+  if (leyendoMusica || !vista || !vista.visible || !config().get('musica', true)) return;
+  leyendoMusica = true;
+  try {
+    const m = await leerMusica(contexto.extensionPath);
+    if (JSON.stringify(m) !== JSON.stringify(musicaActual)) { musicaActual = m; enviarEstado(); }
+  } finally {
+    leyendoMusica = false;
+  }
+}
+
 function minutosInactivo() {
-  if (claudeTrabajando) return 0;
+  if (claudeTrabajando || agyTrabajando) return 0;
   return Math.floor((Date.now() - Math.max(ultimaActividad, inicioExtension)) / 60000);
 }
 const inicioExtension = Date.now();
@@ -500,7 +544,7 @@ function datosActivo() {
 }
 function contarActivo() {
   datosActivo();
-  if (Date.now() - ultimaActividad < 60000 || claudeTrabajando) {
+  if (Date.now() - ultimaActividad < 60000 || claudeTrabajando || agyTrabajando) {
     activo.segundos++;
     if (activo.segundos % 30 === 0) contexto.globalState.update(CLAVE_ACTIVO, activo);
   }
@@ -571,6 +615,8 @@ function enviarEstado() {
     durmiendo,
     trabajando: trabajando(),
     claude: claudeTrabajando,
+    antigravityActivo: agyTrabajando,
+    musica: config().get('musica', true) ? musicaActual : null,
     uso,
     umbral: config().get('avisarEnPorcentaje', 90),
     energiaLigada: energiaDeSesion() !== null,
@@ -593,7 +639,8 @@ function enviarEstado() {
     visitantes: config().get('visitantes', true),
     carruseles: contexto.globalState.get('koala.carruseles') || null,
     sincronizacion: estadoSincronizacion(),
-    antigravity: config().get('antigravity.consultar', true) ? Object.assign({ consultando: consultandoAgy }, cuotasAgy() || {}) : null,
+    antigravity: config().get('antigravity.consultar', true)
+      ? Object.assign({ consultando: consultandoAgy, hooks: configurador ? configurador.agyConectado() : true }, cuotasAgy() || {}) : null,
   });
 }
 
@@ -799,6 +846,7 @@ class ProveedorVista {
       else if (msg.tipo === 'configurar') configurador.configurarMonitor();
       else if (msg.tipo === 'sincronizarCuenta') sincronizarCuentaComando();
       else if (msg.tipo === 'consultarAntigravity') consultarAntigravity(true);
+      else if (msg.tipo === 'configurarAntigravity') configurador.configurarAntigravity().then(enviarEstado);
       else if (msg.tipo === 'agregarServicio') agregarServicio();
       else if (msg.tipo === 'activarApi') activarApi();
       else if (msg.tipo === 'elegirCiudad') elegirCiudad();
@@ -1017,6 +1065,7 @@ function activate(ctx) {
   comando('koalaCientifico.configurar', () => configurador.configurarMonitor());
   comando('koalaCientifico.sincronizarCuenta', sincronizarCuentaComando);
   comando('koalaCientifico.antigravity', async () => { await consultarAntigravity(true); mostrarPanel(); });
+  comando('koalaCientifico.configurarAntigravity', () => configurador.configurarAntigravity().then(enviarEstado));
   comando('koalaCientifico.pomodoro', () => pomodoro.alternar());
   comando('koalaCientifico.agregarServicio', agregarServicio);
   comando('koalaCientifico.consultarAnthropic', () => (config().get('usoDesdeAnthropic', false) ? consultarAnthropic(true) : activarApi()));
@@ -1057,6 +1106,8 @@ function activate(ctx) {
 
   // Claude Code: estado del turno y consumo.
   fs.watchFile(RUTA_ESTADO_CLAUDE, { interval: 1000 }, leerEstadoClaude);
+  fs.watchFile(RUTA_ESTADO_AGY, { interval: 1000 }, leerEstadoAntigravity);
+  leerEstadoAntigravity();
   fs.watchFile(RUTA_USO, { interval: 2000 }, leerUsoOficial);
   leerEstadoClaude();
   leerUsoOficial();
@@ -1079,6 +1130,7 @@ function activate(ctx) {
     if (vueltas % 12 === 0) await medirServicios();
     await consultarAnthropic(false); // respeta su propio intervalo
     consultarAntigravity(false); // solo la ventana líder, cada antigravity.minutos
+    if (vueltas % 2 === 0) medirMusica(); // cada 10 s, con el panel a la vista
     if (visible && vueltas % 6 === 0) await medirGit();
     if (visible) enviarEstado();
   }, 5000);
@@ -1124,6 +1176,8 @@ function activate(ctx) {
       clearInterval(relojUso);
       clearTimeout(temporizadorClaude);
       fs.unwatchFile(RUTA_ESTADO_CLAUDE);
+      fs.unwatchFile(RUTA_ESTADO_AGY);
+      clearTimeout(temporizadorAgy);
       fs.unwatchFile(RUTA_USO);
     },
   });

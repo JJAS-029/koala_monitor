@@ -72,7 +72,7 @@
   // Todas las tarjetas viven en #deposito; cada carrusel muestra una. Elegir una que ya está en otro carrusel las intercambia.
   const GRUPOS = [
     [T('Mascota'), [['mascota', T('Mascota')], ['alarmas', T('Alarmas')], ['pomodoro', T('Pomodoro')]]],
-    [T('Consumo'), [['limites', T('Límites de tu plan')], ['fuente', T('Fuente del dato')], ['antigravity', T('Antigravity · Cuotas')], ['ritmo', T('Ritmo y proyección')],
+    [T('Consumo'), [['cuotas', T('Cuotas de IA')], ['limites', T('Límites de tu plan')], ['fuente', T('Fuente del dato')], ['antigravity', T('Antigravity · Cuotas')], ['ritmo', T('Ritmo y proyección')],
       ['costo', T('Costo equivalente en la API')], ['huella', T('Huella estimada')], ['conversacion', T('Conversación actual')],
       ['cache', T('Eficiencia de caché (hoy)')]]],
     [T('Hoy'), [['resumen', T('Resumen del día')], ['proyectos', T('Por proyecto')], ['modelos', T('Por modelo')],
@@ -83,7 +83,7 @@
   const TARJETAS = [].concat(...GRUPOS.map((g) => g[1]));
   const IDS = TARJETAS.map((x) => x[0]);
   const NOMBRE = Object.fromEntries(TARJETAS);
-  const INICIO = ['mascota', 'limites', 'resumen'];
+  const INICIO = ['mascota', 'cuotas', 'resumen'];
   const MAX_CARRUSELES = 8;
   let carruseles = null; // ids de la tarjeta que muestra cada carrusel
   let conAlerta = new Set();
@@ -268,6 +268,7 @@
 
     pintar('c-fuente', tarjetaFuente(u));
     pintar('c-antigravity', tarjetaAntigravity());
+    pintar('c-cuotas', tarjetaCuotas(u));
     pintar('c-ritmo', ritmo + cifrasRitmo);
     pintar('c-costo', tarjetaCosto());
     pintar('c-huella', tarjetaHuella());
@@ -299,17 +300,43 @@
     }
     if (ag.estado === 'sin_sesion') return nota(T('Abre una terminal, ejecuta <code>agy</code> e inicia sesión con tu cuenta de Google; luego toca ↻.')) + boton;
     if (ag.estado !== 'ok') return nota('⚠ ' + esc(ag.error || '')) + boton;
+    return filasAntigravity(ag, '', true) + nota((ag.error ? '⚠ ' + esc(ag.error) + ' · ' : '') + T('Dato de agy /usage, {0}.', hace(ag.actualizado))) +
+      boton + botonHooksAgy(ag);
+  }
+  // Un renglón por límite: cuánto queda (la barra), con color por lo que ya se usó, y cuándo se renueva.
+  function renglonLibre(nombre, libre, reinicio) {
+    return renglon(nombre, T('{0} libre', pct(libre)), libre, nivel(100 - libre, 75, 90), reinicio ? T('Se renueva {0}', renueva(reinicio)) : '');
+  }
+  function filasAntigravity(ag, prefijo, conModelos) {
     const ahora = Date.now();
-    const grupos = (ag.grupos || []).map((g) => '<div class="sub"><b>' + esc(g.nombre) + '</b></div>' +
+    return (ag.grupos || []).map((g) => '<div class="sub"><b>' + esc(prefijo + g.nombre) + '</b></div>' +
       g.limites.map((l) => {
-        const vencido = l.reinicio && l.reinicio <= ahora; // ya se renovó desde la última consulta
-        const libre = vencido ? 100 : l.restantePct;
-        return renglon(l.ventana === '5h' ? T('5 horas') : l.ventana === 'semana' ? T('Semana') : l.nombre,
-          T('{0} libre', pct(libre)), libre, nivel(100 - libre, 75, 90),
-          l.reinicio ? T('Se renueva {0}', renueva(l.reinicio)) : '');
+        const libre = l.reinicio && l.reinicio <= ahora ? 100 : l.restantePct; // ya se renovó desde la última consulta
+        return renglonLibre(l.ventana === '5h' ? T('5 horas') : l.ventana === 'semana' ? T('Semana') : l.nombre, libre, l.reinicio);
       }).join('') +
-      (g.modelos ? '<div class="sub" title="' + esc(g.modelos) + '">' + esc(g.modelos) + '</div>' : '')).join('');
-    return grupos + nota((ag.error ? '⚠ ' + esc(ag.error) + ' · ' : '') + T('Dato de agy /usage, {0}.', hace(ag.actualizado))) + boton;
+      (conModelos && g.modelos ? '<div class="sub" title="' + esc(g.modelos) + '">' + esc(g.modelos) + '</div>' : '')).join('');
+  }
+  // Si agy está pero sus hooks no, el koala no sabe cuándo trabaja su agente.
+  function botonHooksAgy(ag) {
+    if (ag.hooks !== false) return '';
+    return '<div class="nota">' + T('Conecta el koala con el agente de Antigravity para que se siente a trabajar con él.') + '</div>' +
+      '<button class="boton-chico" data-msg="configurarAntigravity">' + T('Conectar con Antigravity') + '</button>';
+  }
+  // Claude y Antigravity juntos: cuánto te queda de cada límite.
+  function tarjetaCuotas(u) {
+    const nota = (h) => '<div class="nota">' + h + '</div>';
+    let html = '<div class="sub"><b>Claude Code</b></div>';
+    const claude = (v, nombre) => (v ? renglonLibre(nombre, v.reiniciada ? 100 : Math.max(0, 100 - v.pct), v.reiniciada ? null : v.reinicio) : '');
+    if (u && (u.cinco || u.semana)) {
+      html += claude(u.cinco, T('5 horas')) + claude(u.semana, T('Semana')) + (u.extras || []).map((x) => claude(x, x.nombre)).join('');
+    } else {
+      html += nota(T('Sin dato oficial todavía.'));
+    }
+    const ag = est.antigravity;
+    if (ag && ag.estado === 'ok') html += filasAntigravity(ag, 'Antigravity · ', false);
+    else if (ag && ag.estado) html += '<div class="sub"><b>Antigravity</b></div>' + nota(ag.estado === 'sin_agy' ? T('Sin el CLI agy.') : ag.estado === 'sin_sesion' ? T('Falta iniciar sesión en agy.') : '⚠ ' + esc(ag.error || ''));
+    if (ag) html += '<button class="boton-chico" data-msg="consultarAntigravity"' + (ag.consultando ? ' disabled' : '') + '>' + (ag.consultando ? T('Consultando…') : '↻ ' + T('Actualizar')) + '</button>';
+    return html;
   }
 
   function tarjetaFuente(u) {

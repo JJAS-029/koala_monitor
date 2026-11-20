@@ -198,6 +198,16 @@ cuándo se renueva. Necesita el CLI oficial `agy` con tu sesión iniciada (ejecu
 El koala lo busca en el PATH y en `%LOCALAPPDATA%gyin`. Usa `agy -p /usage`, que no gasta tokens; se apaga con
 `koalaCientifico.antigravity.consultar`.
 
+### Agente de Antigravity
+Con el comando *Koala científico: conectar con el agente de Antigravity* (o el botón de la tarjeta) el koala se
+sienta a trabajar cuando trabaja el agente de Antigravity y avisa cuando termina un turno largo. Agrega hooks a
+`~/.gemini/config/hooks.json` (con respaldo) que escriben `~/.claude/koala-estado-antigravity.json`; el monitor de
+celular lee el mismo archivo.
+
+## Música
+En Windows, si suena música (Spotify, YouTube en el navegador…), el koala se pone audífonos, baila y dice la canción.
+Se apaga con `koalaCientifico.musica`.
+
 ## Sincronización
 - **En esta computadora**: todas las ventanas y editores (VS Code, Antigravity, Cursor…) comparten el mismo koala al
   instante: ánimo, pomodoro, alarmas, logros, ciudad del clima y ajustes. No necesita cuenta.

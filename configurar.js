@@ -114,7 +114,45 @@ function crearConfigurador({ extensionPath, globalState, dirClaude, automatico =
     }
   }
 
-  return { configurarMonitor, ofrecerConfiguracion, copiarScripts, monitorConfigurado, DIR_SCRIPTS };
+  // ---------- Antigravity: hooks globales de agy en ~/.gemini/config/hooks.json ----------
+  // Usan el mismo koala-hook.py (con --antigravity): escribe ~/.claude/koala-estado-antigravity.json, que leen
+  // esta extensión y el monitor de celular. La entrada se llama "koala-monitor", la misma que instala monitor_cel,
+  // para que no queden dos.
+  const RUTA_HOOKS_AGY = path.join(os.homedir(), '.gemini', 'config', 'hooks.json');
+  const agyInstalado = () => fs.existsSync(path.join(os.homedir(), '.gemini'));
+  function agyConectado() {
+    try { return fs.readFileSync(RUTA_HOOKS_AGY, 'utf8').includes('koala-hook'); } catch (e) { return false; }
+  }
+  async function configurarAntigravity() {
+    const py = await encontrarPython();
+    if (!py) {
+      vscode.window.showErrorMessage(t('El monitor necesita Python 3 y no lo encontré (probé python3, python y py). Instálalo y vuelve a intentarlo; la mascota y el pomodoro funcionan sin él.'));
+      return false;
+    }
+    try {
+      copiarScripts();
+      let texto = '{}';
+      try { texto = fs.readFileSync(RUTA_HOOKS_AGY, 'utf8'); } catch (e) { /* aún no existe */ }
+      const hooks = JSON.parse(texto || '{}');
+      fs.mkdirSync(path.dirname(RUTA_HOOKS_AGY), { recursive: true });
+      fs.writeFileSync(`${RUTA_HOOKS_AGY}.koala-respaldo-${Date.now()}`, texto);
+      const cmd = (arg) => `${py} "${rutaComando(path.join(DIR_SCRIPTS, 'koala-hook.py'))}" ${arg} --antigravity`;
+      hooks['koala-monitor'] = {
+        enabled: true,
+        PreInvocation: [{ type: 'command', command: cmd('trabajando'), timeout: 5 }],
+        PostToolUse: [{ matcher: '*', hooks: [{ type: 'command', command: cmd('trabajando'), timeout: 5 }] }],
+        Stop: [{ type: 'command', command: cmd('descanso'), timeout: 5 }],
+      };
+      fs.writeFileSync(RUTA_HOOKS_AGY, JSON.stringify(hooks, null, 2) + '\n');
+      vscode.window.showInformationMessage('🐨 ' + t('Listo: el koala sabrá cuándo trabaja el agente de Antigravity (también en el monitor de celular).'));
+      return true;
+    } catch (e) {
+      vscode.window.showErrorMessage(t('No se pudo configurar el monitor: {0}', e.message));
+      return false;
+    }
+  }
+
+  return { configurarMonitor, ofrecerConfiguracion, copiarScripts, monitorConfigurado, configurarAntigravity, agyConectado, agyInstalado, DIR_SCRIPTS };
 }
 
 module.exports = { crearConfigurador, encontrarPython, rutaComando };
