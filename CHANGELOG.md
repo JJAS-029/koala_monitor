@@ -1,5 +1,9 @@
 # Registro de cambios
 
+## 1.13.1
+- Arreglo: las cuotas de Antigravity no aparecían cuando `agy` está donde lo deja Antigravity (`~/.gemini/bin`,
+  fuera del PATH). Ahora el koala también lo busca ahí.
+
 ## 1.13.0
 Para que el koala se comporte igual en VS Code y en el monitor de celular (comparten su estado):
 - **Energía ligada a tus cuotas de IA**: el promedio de lo que queda de la sesión de 5 h de Claude y del límite de 5 h

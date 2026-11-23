@@ -9,14 +9,16 @@ const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
 
-// agy no siempre queda en el PATH: el instalador de Windows lo pone en %LOCALAPPDATA%\agy\bin.
-function buscarAgy(entorno = process.env) {
-  if (entorno.AGY_BIN && fs.existsSync(entorno.AGY_BIN)) return entorno.AGY_BIN;
-  const local = entorno.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
-  const candidatos = process.platform === 'win32'
-    ? [path.join(local, 'agy', 'bin', 'agy.exe'), path.join(local, 'Programs', 'agy', 'agy.exe'), path.join(os.homedir(), '.local', 'bin', 'agy.exe')]
-    : [path.join(os.homedir(), '.local', 'bin', 'agy'), '/usr/local/bin/agy', '/opt/homebrew/bin/agy'];
-  return candidatos.find((c) => fs.existsSync(c)) || 'agy'; // si no, se prueba el del PATH
+// agy no siempre queda en el PATH: Antigravity lo instala en ~/.gemini/bin (sin tocar el PATH) y el instalador
+// de Windows del CLI en %LOCALAPPDATA%\agy\bin.
+function buscarAgy(entorno = process.env, plataforma = process.platform, inicio = os.homedir(), existe = fs.existsSync) {
+  if (entorno.AGY_BIN && existe(entorno.AGY_BIN)) return entorno.AGY_BIN;
+  const gemini = path.join(inicio, '.gemini', 'bin');
+  const local = entorno.LOCALAPPDATA || path.join(inicio, 'AppData', 'Local');
+  const candidatos = plataforma === 'win32'
+    ? [path.join(gemini, 'agy.exe'), path.join(local, 'agy', 'bin', 'agy.exe'), path.join(local, 'Programs', 'agy', 'agy.exe'), path.join(inicio, '.local', 'bin', 'agy.exe')]
+    : [path.join(gemini, 'agy'), path.join(inicio, '.local', 'bin', 'agy'), '/usr/local/bin/agy', '/opt/homebrew/bin/agy'];
+  return candidatos.find((c) => existe(c)) || 'agy'; // si no, se prueba el del PATH
 }
 
 const fraccionAPct = (f) => (Number.isFinite(Number(f)) ? Math.max(0, Math.min(100, Math.round(Number(f) * 100))) : null);

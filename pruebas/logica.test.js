@@ -423,3 +423,14 @@ test('antigravity: tokens por hora y por familia desde las conversaciones', () =
   assert.equal(m.gemini.flat().reduce((a, b) => a + b, 0), 1200); // la repetida no cuenta dos veces
   assert.equal(antigravity.familia('gpt-oss-120b-medium'), 'otro');
 });
+
+test('buscarAgy encuentra el agy que Antigravity deja en ~/.gemini/bin', () => {
+  const path = require('path');
+  const inicio = path.join('C:', 'Users', 'ana');
+  const enGemini = path.join(inicio, '.gemini', 'bin', 'agy.exe');
+  assert.equal(antigravity.buscarAgy({}, 'win32', inicio, (r) => r === enGemini), enGemini);
+  const enLinux = path.join(inicio, '.gemini', 'bin', 'agy');
+  assert.equal(antigravity.buscarAgy({}, 'linux', inicio, (r) => r === enLinux), enLinux);
+  assert.equal(antigravity.buscarAgy({}, 'win32', inicio, () => false), 'agy');
+  assert.equal(antigravity.buscarAgy({ AGY_BIN: 'x' }, 'win32', inicio, () => true), 'x');
+});
